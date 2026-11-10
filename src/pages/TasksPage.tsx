@@ -280,45 +280,68 @@ export default function TasksPage({ session }: { session: any }) {
   }, [tasks]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto px-2 sm:px-4 pb-32">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-[#0d213b] to-[#1e3a5f] rounded-2xl p-4 sm:p-6 text-white shadow-md relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="p-2 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              <CheckSquare className="w-5 h-5" />
-            </span>
-            <h1 className="text-2xl font-bold tracking-tight">My Tasks</h1>
+    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto px-3 sm:px-6 pb-32 pt-2">
+      {/* Top Header & Overview */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-slate-700 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
+              <CheckSquare className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                My Assigned Tasks
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Review tasks assigned by HR, join scheduled meetings, and update your work progress.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-blue-100/80 max-w-xl mt-1">
-            View tasks assigned by your HR, schedule your work, and update task progress (Working on it, On Hold, or Done).
-          </p>
+        </div>
 
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/15">
-              <span className="text-xs text-blue-200 font-medium">All Tasks</span>
-              <p className="text-xl font-bold text-white mt-0.5">{counts.total}</p>
+        {/* 4 Clean High-Contrast Metric Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">All Tasks</span>
+              <span className="text-sm text-slate-400">📋</span>
             </div>
-            <div className="bg-amber-500/20 backdrop-blur-sm rounded-xl p-3 border border-amber-500/30">
-              <span className="text-xs text-amber-200 font-medium">⏳ Pending</span>
-              <p className="text-xl font-bold text-amber-300 mt-0.5">{counts.pending}</p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{counts.total}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Assigned to you</p>
+          </div>
+
+          <div className="bg-amber-50/70 dark:bg-amber-950/20 rounded-2xl p-3.5 border border-amber-200/80 dark:border-amber-900/40">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pending</span>
+              <span className="text-sm">⏳</span>
             </div>
-            <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-3 border border-blue-500/30">
-              <span className="text-xs text-blue-200 font-medium">🚀 Working On It</span>
-              <p className="text-xl font-bold text-blue-300 mt-0.5">{counts.inProgress}</p>
+            <p className="text-2xl font-extrabold text-amber-800 dark:text-amber-300 mt-1">{counts.pending}</p>
+            <p className="text-[11px] text-amber-600/80 mt-0.5">Awaiting start</p>
+          </div>
+
+          <div className="bg-blue-50/70 dark:bg-blue-950/20 rounded-2xl p-3.5 border border-blue-200/80 dark:border-blue-900/40">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">In Progress</span>
+              <span className="text-sm">🚀</span>
             </div>
-            <div className="bg-emerald-500/20 backdrop-blur-sm rounded-xl p-3 border border-emerald-500/30">
-              <span className="text-xs text-emerald-200 font-medium">✅ Done</span>
-              <p className="text-xl font-bold text-emerald-300 mt-0.5">{counts.completed}</p>
+            <p className="text-2xl font-extrabold text-blue-800 dark:text-blue-300 mt-1">{counts.inProgress}</p>
+            <p className="text-[11px] text-blue-600/80 mt-0.5">Working on it</p>
+          </div>
+
+          <div className="bg-emerald-50/70 dark:bg-emerald-950/20 rounded-2xl p-3.5 border border-emerald-200/80 dark:border-emerald-900/40">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Done</span>
+              <span className="text-sm">✅</span>
             </div>
+            <p className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-300 mt-1">{counts.completed}</p>
+            <p className="text-[11px] text-emerald-600/80 mt-0.5">Completed</p>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
             { id: 'all', label: `All (${counts.total})` },
             { id: 'pending', label: `Pending (${counts.pending})` },
@@ -329,10 +352,10 @@ export default function TasksPage({ session }: { session: any }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                 activeTab === tab.id
-                  ? 'bg-orange-500 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'bg-orange-500 text-white shadow-xs scale-102'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
               {tab.label}
@@ -346,24 +369,24 @@ export default function TasksPage({ session }: { session: any }) {
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-xs bg-slate-50 border-slate-200 focus:bg-white"
+            className="pl-9 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white"
           />
         </div>
       </div>
 
       {/* Tasks List */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-12 text-slate-400">
-          <RefreshCw className="w-7 h-7 animate-spin text-orange-500 mb-2" />
-          <p className="text-sm">Loading your tasks...</p>
+        <div className="flex flex-col items-center justify-center p-16 text-slate-400 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200">
+          <RefreshCw className="w-8 h-8 animate-spin text-orange-500 mb-2" />
+          <p className="text-sm font-medium">Loading your tasks...</p>
         </div>
       ) : filteredTasks.length === 0 ? (
-        <Card className="p-12 text-center bg-white border-slate-200 shadow-xs">
-          <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mx-auto mb-3">
-            <CheckSquare className="w-6 h-6" />
+        <Card className="p-16 text-center bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-3xl shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 text-orange-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+            <CheckSquare className="w-7 h-7" />
           </div>
-          <h3 className="text-base font-bold text-slate-800">No tasks found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+          <h3 className="text-base font-bold text-slate-800 dark:text-white">No tasks found</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
             {searchQuery
               ? 'No tasks match your search query.'
               : activeTab === 'all'
@@ -372,7 +395,7 @@ export default function TasksPage({ session }: { session: any }) {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-4">
           {filteredTasks.map((task) => {
             const todayStr = format(new Date(), 'yyyy-MM-dd');
             const isCompleted = task.status.toLowerCase() === 'done' || task.status.toLowerCase() === 'completed';
@@ -386,99 +409,51 @@ export default function TasksPage({ session }: { session: any }) {
             return (
               <Card
                 key={task.id}
-                className={`p-4 bg-white border transition-all shadow-xs hover:shadow-md ${
+                className={`p-4 sm:p-5 bg-white dark:bg-slate-800 border rounded-2xl transition-all shadow-xs hover:shadow-md ${
                   isCompleted
-                    ? 'border-emerald-200/80 bg-emerald-50/20'
+                    ? 'border-emerald-200/90 bg-emerald-50/15'
                     : isOverdue
                     ? 'border-rose-200 bg-rose-50/10'
-                    : 'border-slate-200'
+                    : 'border-slate-200/90 dark:border-slate-700'
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  {/* Task Info */}
-                  <div className="space-y-1.5 flex-1 min-w-0">
+                {/* Vertical Structured Content - No Column Squishing */}
+                <div className="flex flex-col gap-3">
+                  
+                  {/* Row 1: Header (Title, Badges, Join Meeting Link) */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className={`text-base font-bold text-slate-900 leading-snug ${isCompleted ? 'line-through text-slate-500' : ''}`}>
+                      <h3 className={`text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug ${
+                        isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : ''
+                      }`}>
                         {task.title}
                       </h3>
-                      <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${priorityClass}`}>
-                        <Flag className="w-2.5 h-2.5 mr-1" />
-                        {task.priority}
+
+                      <Badge variant="outline" className={`text-[11px] px-2.5 py-0.5 rounded-md font-semibold ${priorityClass}`}>
+                        <Flag className="w-3 h-3 mr-1" />
+                        {task.priority} Priority
                       </Badge>
-                      <Badge variant="outline" className={`text-[10px] px-2 py-0.5 font-bold border ${colorMeta.bg} ${colorMeta.text} ${colorMeta.border}`}>
+
+                      <Badge variant="outline" className={`text-[11px] px-2.5 py-0.5 font-bold rounded-md border ${colorMeta.bg} ${colorMeta.text} ${colorMeta.border}`}>
                         {colorMeta.icon} {task.status}
                       </Badge>
-                    </div>
-
-                    {task.description && (
-                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line pt-0.5">
-                        {task.description}
-                      </p>
-                    )}
-
-                    {/* Due Date & Assignment info */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 pt-1">
-                      {task.due_date && (
-                        <div className="flex items-center gap-1.5 font-medium">
-                          <Calendar className={`w-3.5 h-3.5 ${isOverdue ? 'text-rose-600' : isDueToday ? 'text-amber-600' : 'text-slate-400'}`} />
-                          <span className={isOverdue ? 'text-rose-600 font-bold' : isDueToday ? 'text-amber-600 font-bold' : 'text-slate-700'}>
-                            Due: {format(parseISO(task.due_date), 'dd MMM yyyy')}
-                            {task.due_time && ` at ${task.due_time}`}
-                          </span>
-                          {isOverdue && (
-                            <span className="text-[10px] text-rose-600 font-bold uppercase bg-rose-100 px-1.5 py-0.2 rounded">
-                              Overdue
-                            </span>
-                          )}
-                          {isDueToday && (
-                            <span className="text-[10px] text-amber-700 font-bold uppercase bg-amber-100 px-1.5 py-0.2 rounded">
-                              Due Today
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                        <User className="w-3 h-3" />
-                        <span>Assigned by {task.assigned_by_name || 'HR Admin'}</span>
-                      </div>
 
                       {task.assigned_employee_names && task.assigned_employee_names.length > 1 && (
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
                           <Users className="w-3 h-3 text-indigo-600" />
-                          <span>Team Task ({task.assigned_employee_names.length}): {task.assigned_employee_names.join(', ')}</span>
-                        </div>
-                      )}
-
-                      {task.completed_at && (
-                        <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Finished {format(new Date(task.completed_at), 'dd MMM, hh:mm a')}</span>
-                        </div>
+                          Team Task ({task.assigned_employee_names.length})
+                        </span>
                       )}
                     </div>
 
-                    {/* Action Buttons: Google Calendar + Join Meeting Link */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                      {task.due_date && (
-                        <a
-                          href={getGoogleCalendarUrl(task)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors shadow-2xs"
-                          title="Open and sync with Google Calendar"
-                        >
-                          <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Add to Google Calendar</span>
-                        </a>
-                      )}
-
+                    {/* Quick Meeting & Calendar Launchers */}
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                       {task.meeting_link && (
                         <a
                           href={task.meeting_link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm active:scale-95 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm active:scale-95 transition-all"
                           title="Join Online Meeting / Video Call"
                         >
                           <Video className="w-3.5 h-3.5" />
@@ -486,98 +461,122 @@ export default function TasksPage({ session }: { session: any }) {
                           <ExternalLink className="w-3 h-3 opacity-80" />
                         </a>
                       )}
+
+                      {task.due_date && (
+                        <a
+                          href={getGoogleCalendarUrl(task)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                          title="Add to Google Calendar"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                          <span className="hidden sm:inline">Add to Calendar</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 2: Description */}
+                  {task.description && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                      {task.description}
+                    </div>
+                  )}
+
+                  {/* Row 3: Metadata Details */}
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
+                    {task.due_date && (
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <Calendar className={`w-3.5 h-3.5 ${isOverdue ? 'text-rose-600' : isDueToday ? 'text-amber-600' : 'text-slate-400'}`} />
+                        <span className={isOverdue ? 'text-rose-600 font-bold' : isDueToday ? 'text-amber-600 font-bold' : 'text-slate-700 dark:text-slate-300'}>
+                          Due: {format(parseISO(task.due_date), 'dd MMM yyyy')}
+                          {task.due_time && ` at ${task.due_time}`}
+                        </span>
+                        {isOverdue && (
+                          <span className="text-[10px] text-rose-700 font-bold uppercase bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded">
+                            Overdue
+                          </span>
+                        )}
+                        {isDueToday && (
+                          <span className="text-[10px] text-amber-800 font-bold uppercase bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                            Due Today
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Assigned by <strong className="text-slate-700 dark:text-slate-200 font-semibold">{task.assigned_by_name || 'Business HR'}</strong></span>
                     </div>
 
-                    {/* Employee Remarks / Notes if present */}
-                    {task.notes && (
-                      <div className="mt-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
-                        <strong className="text-slate-800 font-semibold block text-[11px] mb-0.5">Your Work Note:</strong>
-                        {task.notes}
+                    {task.completed_at && (
+                      <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Finished {format(new Date(task.completed_at), 'dd MMM, hh:mm a')}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Status & Actions Strip (Mobile Friendly) */}
-                  <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 w-full">
-                    <div className="flex items-center justify-between sm:justify-start gap-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  {/* Row 4: Work Note (if present) */}
+                  {task.notes && (
+                    <div className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                      <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <strong className="text-amber-900 dark:text-amber-300 font-semibold block text-[11px] mb-0.5">Your Work Note:</strong>
+                        <p className="whitespace-pre-line">{task.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Row 5: Footer Actions Strip (Change Status Buttons & Add Note) */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-1">
                         Change Status:
                       </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setNoteTask(task);
-                          setNoteText(task.notes || '');
-                        }}
-                        className="sm:hidden h-7 px-2.5 text-[11px] font-medium gap-1 text-slate-700 bg-slate-50 border-slate-200"
-                      >
-                        <MessageSquare className="w-3 h-3 text-slate-500" />
-                        {task.notes ? 'Edit Note' : 'Add Note'}
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 xs:grid-cols-4 sm:flex sm:flex-wrap items-center gap-1.5 w-full sm:w-auto">
-                      {statuses.length > 0 ? (
-                        statuses.map((s) => {
-                          const isCurrent = task.status.toLowerCase() === s.name.toLowerCase();
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              disabled={updatingTaskId === task.id}
-                              onClick={() => handleUpdateStatus(task, s.name)}
-                              className={`py-1.5 px-2 text-xs rounded-lg font-semibold transition-all border text-center ${
-                                isCurrent
-                                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 active:scale-95'
-                              }`}
-                            >
-                              {s.name}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(task, 'Pending')}
-                            className={`py-1.5 px-2 text-xs rounded-lg font-semibold border text-center ${
-                              task.status === 'Pending' ? 'bg-amber-600 text-white' : 'bg-white text-amber-700 border-amber-300'
-                            }`}
-                          >
-                            Pending
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(task, 'Working on it')}
-                            className={`py-1.5 px-2 text-xs rounded-lg font-semibold border text-center ${
-                              task.status === 'Working on it' ? 'bg-blue-600 text-white' : 'bg-white text-blue-700 border-blue-300'
-                            }`}
-                          >
-                            Working on it
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(task, 'On Hold')}
-                            className={`py-1.5 px-2 text-xs rounded-lg font-semibold border text-center ${
-                              task.status === 'On Hold' ? 'bg-purple-600 text-white' : 'bg-white text-purple-700 border-purple-300'
-                            }`}
-                          >
-                            On Hold
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(task, 'Done')}
-                            className={`py-1.5 px-2 text-xs rounded-lg font-semibold border text-center ${
-                              task.status === 'Done' ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700 border-emerald-300'
-                            }`}
-                          >
-                            Done
-                          </button>
-                        </>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {statuses.length > 0 ? (
+                          statuses.map((s) => {
+                            const isCurrent = task.status.toLowerCase() === s.name.toLowerCase();
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                disabled={updatingTaskId === task.id}
+                                onClick={() => handleUpdateStatus(task, s.name)}
+                                className={`py-1.5 px-3 text-xs rounded-xl font-semibold transition-all border ${
+                                  isCurrent
+                                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95'
+                                }`}
+                              >
+                                {s.name}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          ['Pending', 'Working on it', 'On Hold', 'Done'].map((st) => {
+                            const isCurrent = task.status.toLowerCase() === st.toLowerCase();
+                            return (
+                              <button
+                                key={st}
+                                type="button"
+                                disabled={updatingTaskId === task.id}
+                                onClick={() => handleUpdateStatus(task, st)}
+                                className={`py-1.5 px-3 text-xs rounded-xl font-semibold transition-all border ${
+                                  isCurrent
+                                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95'
+                                }`}
+                              >
+                                {st}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
 
                     <Button
@@ -588,7 +587,7 @@ export default function TasksPage({ session }: { session: any }) {
                         setNoteTask(task);
                         setNoteText(task.notes || '');
                       }}
-                      className="hidden sm:inline-flex h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-50 gap-1.5 shrink-0"
+                      className="h-8 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 rounded-xl gap-1.5 shrink-0 self-start sm:self-auto"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
                       {task.notes ? 'Edit Note' : 'Add Note'}
@@ -603,7 +602,7 @@ export default function TasksPage({ session }: { session: any }) {
 
       {/* Note Update Dialog */}
       <Dialog open={!!noteTask} onOpenChange={(open) => { if (!open) setNoteTask(null); }}>
-        <DialogContent className="max-w-md bg-white border-slate-200 text-slate-900 shadow-2xl p-6">
+        <DialogContent className="max-w-md bg-white border-slate-200 text-slate-900 shadow-2xl p-6 rounded-3xl">
           <DialogHeader className="border-b border-slate-100 pb-3">
             <DialogTitle className="text-base font-bold text-slate-900">
               Add Task Work Note
@@ -619,7 +618,7 @@ export default function TasksPage({ session }: { session: any }) {
               placeholder="e.g. Completed initial draft, waiting on client approval, need invoice copies..."
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
-              className="w-full p-2.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+              className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
             />
           </div>
 
@@ -629,6 +628,7 @@ export default function TasksPage({ session }: { session: any }) {
               variant="outline"
               size="sm"
               onClick={() => setNoteTask(null)}
+              className="rounded-xl"
             >
               Cancel
             </Button>
@@ -637,7 +637,7 @@ export default function TasksPage({ session }: { session: any }) {
               size="sm"
               disabled={savingNote}
               onClick={handleSaveNotes}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold"
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
             >
               {savingNote ? 'Saving...' : 'Save Work Note'}
             </Button>
