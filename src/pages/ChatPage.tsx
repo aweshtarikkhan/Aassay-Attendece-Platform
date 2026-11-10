@@ -1069,7 +1069,7 @@ const [showMentions, setShowMentions] = React.useState(false);
                       const isMine = msg.sender_id === employee.id;
                       const showSender = selectedType === 'group' && !isMine && (idx === 0 || messages[idx-1].sender_id !== msg.sender_id);
                       const msgDate = new Date(msg.created_at);
-                      const dateKey = format(msgDate, 'yyyy-MM-dd');
+                      const dateKey = safeFormatDate(m.created_at, 'yyyy-MM-dd');
                       const showDateSeparator = dateKey !== lastDateKey;
                       if (showDateSeparator) lastDateKey = dateKey;
 
@@ -1077,7 +1077,7 @@ const [showMentions, setShowMentions] = React.useState(false);
                         ? 'Today'
                         : isYesterday(msgDate)
                         ? 'Yesterday'
-                        : format(msgDate, 'MMMM d, yyyy');
+                        : safeFormatDate(m.created_at, 'MMMM d, yyyy');
 
                       return (
                         <React.Fragment key={msg.id}>
@@ -1106,7 +1106,7 @@ const [showMentions, setShowMentions] = React.useState(false);
                               {/* Read Receipts */}
                               <div className={`flex items-center gap-1 self-end mt-1.5 ${isMine ? 'text-orange-100' : 'text-gray-400 dark:text-slate-500'}`}>
                                 <span className="text-[9px] font-bold">
-                                  {format(msgDate, 'HH:mm')}
+                                  {safeFormatTime(m.created_at, '', 'HH:mm')}
                                 </span>
                                 {isMine && (
                                   <>

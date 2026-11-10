@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import {  LayoutDashboard, History, CalendarDays, Umbrella, HelpCircle, Bell, LogOut, MessageCircle, Moon, Sun, X, CheckCircle2, Menu, ChevronRight, Fingerprint, Settings, Home, FileCheck } from 'lucide-react';
+import {  LayoutDashboard, History, CalendarDays, Umbrella, HelpCircle, Bell, LogOut, MessageCircle, Moon, Sun, X, CheckCircle2, Menu, ChevronRight, Fingerprint, Settings, Home, FileCheck, CheckSquare, Receipt, LayoutGrid } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,7 @@ export default function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadLeaves, setUnreadLeaves] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -116,6 +117,32 @@ export default function DashboardLayout() {
         // Count unread leave notifications
         const leaveNotifs = notifs.filter((n: any) => !n.is_read && (n.type === 'leave_approved' || n.type === 'leave_rejected' || n.type === 'leave_request'));
         setUnreadLeaves(leaveNotifs.length);
+      }
+
+      // Check active tasks count (both primary and team assignees)
+      try {
+        const { data: aRows } = await supabase
+          .from('task_assignees')
+          .select('task_id')
+          .eq('employee_id', empData.id);
+        const aTaskIds = aRows?.map((r: any) => r.task_id) || [];
+
+        let tQ = supabase.from('employee_tasks').select('id, status');
+        if (aTaskIds.length > 0) {
+          tQ = tQ.or(`employee_id.eq.${empData.id},id.in.(${aTaskIds.join(',')})`);
+        } else {
+          tQ = tQ.eq('employee_id', empData.id);
+        }
+
+        const { data: activeTasks } = await tQ;
+        if (activeTasks) {
+          const pendingCount = activeTasks.filter(
+            (t: any) => !['done', 'completed'].includes((t.status || '').toLowerCase())
+          ).length;
+          setPendingTasks(pendingCount);
+        }
+      } catch (tErr) {
+        console.error("Error fetching tasks count:", tErr);
       }
 
           // Check for unread chat messages
@@ -453,6 +480,45 @@ export default function DashboardLayout() {
     return () => window.removeEventListener('chat-read', handleChatRead);
   }, []);
 
+  // Listen for custom 'open-mobile-menu' event
+  useEffect(() => {
+    const handleOpenMenu = () => setMobileMenuOpen(true);
+    window.addEventListener('open-mobile-menu', handleOpenMenu);
+    return () => window.removeEventListener('open-mobile-menu', handleOpenMenu);
+  }, []);
+
+  // Listen for 'tasks_updated' event to refresh pending task count
+  useEffect(() => {
+    const refreshTasksCount = async () => {
+      if (!employee?.id) return;
+      try {
+        const { data: aRows } = await supabase
+          .from('task_assignees')
+          .select('task_id')
+          .eq('employee_id', employee.id);
+        const aTaskIds = aRows?.map((r: any) => r.task_id) || [];
+
+        let tQ = supabase.from('employee_tasks').select('id, status');
+        if (aTaskIds.length > 0) {
+          tQ = tQ.or(`employee_id.eq.${employee.id},id.in.(${aTaskIds.join(',')})`);
+        } else {
+          tQ = tQ.eq('employee_id', employee.id);
+        }
+
+        const { data: activeTasks } = await tQ;
+        if (activeTasks) {
+          const pendingCount = activeTasks.filter(
+            (t: any) => !['done', 'completed'].includes((t.status || '').toLowerCase())
+          ).length;
+          setPendingTasks(pendingCount);
+        }
+      } catch (err) {}
+    };
+
+    window.addEventListener('tasks_updated', refreshTasksCount);
+    return () => window.removeEventListener('tasks_updated', refreshTasksCount);
+  }, [employee]);
+
   // Fast polling check for unread messages (every 4 seconds)
   useEffect(() => {
     if (!employee) return;
@@ -527,24 +593,29 @@ export default function DashboardLayout() {
   };
 
   const navItems = [
-    { name: 'History', icon: History, path: '/history' },
-    { name: 'Leaves', icon: Umbrella, path: '/leaves' },
-    { name: 'Home', icon: Home, path: '/dashboard' },
-    { name: 'Chat', icon: MessageCircle, path: '/chat' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
+    { name: 'History', icon: History, path: '/history', isMenu: false },
+    { name: 'Leaves', icon: Umbrella, path: '/leaves', isMenu: false },
+    { name: 'Home', icon: Home, path: '/dashboard', isMenu: false },
+    { name: 'Tasks', icon: CheckSquare, path: '/tasks', isMenu: false },
+    { name: 'Expenses', icon: Receipt, path: '/expenses', isMenu: false },
+    { name: 'All Pages', icon: LayoutGrid, path: '#', isMenu: true },
   ];
 
   const sidebarNavItems = [
     { name: 'Home', icon: Home, path: '/dashboard' },
+    { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
     { name: 'History', icon: History, path: '/history' },
     { name: 'Leaves', icon: Umbrella, path: '/leaves' },
+    { name: 'Expenses', icon: Receipt, path: '/expenses' },
     { name: 'Documents', icon: FileCheck, path: '/documents' },
     { name: 'Chat', icon: MessageCircle, path: '/chat' },
+    { name: 'Holidays', icon: CalendarDays, path: '/holidays' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   // Get dot indicator for nav items
   const getNavDot = (itemName: string) => {
+    if (itemName === 'Tasks' && pendingTasks > 0) return true;
     if (itemName === 'Leaves' && unreadLeaves > 0) return true;
     if (itemName === 'Chat' && unreadChats > 0) return true;
     return false;
@@ -608,6 +679,11 @@ export default function DashboardLayout() {
                   {unreadChats}
                 </span>
               )}
+              {hasDot && item.name === 'Tasks' && pendingTasks > 0 && (
+                <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shadow-sm">
+                  {pendingTasks}
+                </span>
+              )}
             </NavLink>
           );
         })}
@@ -627,6 +703,13 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-[100dvh] w-full bg-gray-50 dark:bg-slate-900 overflow-hidden transition-colors">
+      {/* Mobile Drawer Sheet */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="p-0 w-72 bg-[#0a192f] border-r border-white/10 text-white flex flex-col z-[100000]">
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
+
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-[#0a192f] flex-col transition-colors z-20 shadow-xl">
         {sidebarContent}
@@ -637,15 +720,24 @@ export default function DashboardLayout() {
         {/* Header - Dark Blue AassayBiz Theme */}
         <header className="h-14 bg-[#0a192f] flex items-center justify-between px-4 md:px-8 z-10 shrink-0 shadow-md">
           <div className="flex items-center min-w-0 mr-2 flex-1">
-            {/* Mobile App Name (max 40 chars & max 4 words) */}
-            <div className="md:hidden flex items-center min-w-0" title={businessName || ''}>
-              {businessName ? (
-                <div className="text-white font-bold text-base sm:text-lg tracking-wide capitalize truncate max-w-[220px] xs:max-w-[280px]">
-                  {formatBusinessName(businessName)}
-                </div>
-              ) : (
-                <div className="h-5 w-32 bg-white/20 rounded-md animate-pulse" />
-              )}
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden mr-2.5 p-1.5 -ml-1 text-white hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            {/* Mobile App Title */}
+            <div className="md:hidden flex flex-col min-w-0 flex-1 mr-2" title={businessName || 'AassayBiz'}>
+              <span className="text-white font-bold text-sm sm:text-base tracking-wide truncate leading-tight">
+                {businessName || 'AassayBiz Attendance'}
+              </span>
+              <span className="text-[10px] text-orange-400 font-semibold tracking-wider uppercase">
+                Employee Portal
+              </span>
             </div>
 
             {/* Desktop Title */}
@@ -812,49 +904,94 @@ export default function DashboardLayout() {
           </div>
         )}
 
-        {/* Mobile Bottom Navigation - AassayBiz Style */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-around items-end px-2 pb-safe pt-2 z-[9999] shadow-[0_-10px_30px_rgba(0,0,0,0.15)] min-h-[70px]" style={{ paddingBottom: "env(safe-area-inset-bottom, 20px)" }}>
+        {/* Mobile Bottom Navigation - AassayBiz Modern Bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 grid grid-cols-6 items-center px-1 z-[9999] shadow-[0_-6px_25px_rgba(0,0,0,0.08)] h-16 pb-1">
           {navItems.map((item, index) => {
             const isCenter = index === 2; // Home button at index 2
             const hasDot = getNavDot(item.name);
             
             if (isCenter) {
               return (
-                <div key={item.name} className="flex-1 flex justify-center z-[10000]">
+                <div key={item.name} className="flex justify-center items-center w-full">
                   <NavLink
                     to={item.path}
                     className={({ isActive }) =>
-                      `-mt-8 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white dark:border-slate-900 transition-transform active:scale-95 ${
-                        isActive ? 'bg-orange-600' : 'bg-orange-500 hover:bg-orange-600'
-                      }`
+                      `flex flex-col items-center justify-center -mt-3.5 w-full active:scale-95 transition-transform`
                     }
                   >
-                    <div className="flex flex-col items-center">
-                      <item.icon className="w-6 h-6 text-white" />
-                      <span className="text-[8px] font-bold text-white mt-0.5">HOME</span>
-                    </div>
+                    {({ isActive }) => (
+                      <>
+                        <div
+                          className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md transition-all ${
+                            isActive
+                              ? 'bg-orange-600 text-white shadow-orange-500/40 ring-2 ring-white dark:ring-slate-900'
+                              : 'bg-gradient-to-tr from-orange-500 to-amber-500 text-white shadow-orange-500/25 ring-2 ring-white dark:ring-slate-900'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <span
+                          className={`text-[9.5px] font-bold mt-0.5 tracking-tight ${
+                            isActive ? 'text-orange-600 font-extrabold' : 'text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          {item.name}
+                        </span>
+                      </>
+                    )}
                   </NavLink>
+                </div>
+              );
+            }
+
+            if (item.isMenu) {
+              const isOtherPageActive = ['/chat', '/documents', '/holidays', '/settings', '/profile'].some(p => location.pathname.startsWith(p));
+              return (
+                <div key={item.name} className="flex justify-center items-center w-full">
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(true)}
+                    className={`flex flex-col items-center justify-center py-1 w-full active:scale-95 transition-all ${
+                      isOtherPageActive || mobileMenuOpen
+                        ? 'text-orange-600 font-bold'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    <div className="relative flex items-center justify-center w-6 h-6">
+                      <item.icon className="w-5 h-5" />
+                      {(unreadChats > 0 || unreadLeaves > 0) && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />
+                      )}
+                    </div>
+                    <span className="text-[9.5px] font-semibold tracking-tight leading-tight mt-1 truncate">
+                      {item.name}
+                    </span>
+                  </button>
                 </div>
               );
             }
             
             return (
-              <div key={item.name} className="flex-1 flex justify-center">
+              <div key={item.name} className="flex justify-center items-center w-full">
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex flex-col items-center gap-1 p-1 relative ${
-                      isActive ? 'text-orange-500' : 'text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300'
+                    `flex flex-col items-center justify-center py-1 w-full active:scale-95 transition-all ${
+                      isActive ? 'text-orange-600 font-bold' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                     }`
                   }
                 >
-                  <div className="relative">
-                    <item.icon className="w-6 h-6" />
+                  <div className="relative flex items-center justify-center w-6 h-6">
+                    <item.icon className="w-5 h-5" />
                     {hasDot && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />
+                      <span className="absolute -top-1 -right-1.5 min-w-[15px] h-3.5 px-0.5 bg-orange-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center border border-white dark:border-slate-900">
+                        {item.name === 'Tasks' && pendingTasks > 0 ? pendingTasks : ''}
+                      </span>
                     )}
                   </div>
-                  <span className="text-[10px] font-medium">{item.name}</span>
+                  <span className="text-[9.5px] font-semibold tracking-tight leading-tight mt-1 truncate">
+                    {item.name}
+                  </span>
                 </NavLink>
               </div>
             );

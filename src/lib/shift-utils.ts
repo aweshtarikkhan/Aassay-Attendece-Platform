@@ -10,23 +10,45 @@ export function computeShiftStatus(
   
   let clockInMins = 0;
   try {
-    if (clockInTime.includes('T')) {
-      const parts = new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false
-      }).formatToParts(new Date(clockInTime));
-      const hh = Number(parts.find(p => p.type === 'hour')?.value || 0);
-      const mm = Number(parts.find(p => p.type === 'minute')?.value || 0);
-      clockInMins = hh * 60 + mm;
+    const rawStr = String(clockInTime).trim();
+    if (rawStr.includes('T')) {
+      const d = new Date(rawStr);
+      if (!isNaN(d.getTime())) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: false
+          }).formatToParts(d);
+          const hh = Number(parts.find(p => p.type === 'hour')?.value || 0);
+          const mm = Number(parts.find(p => p.type === 'minute')?.value || 0);
+          clockInMins = hh * 60 + mm;
+        } catch {
+          clockInMins = d.getHours() * 60 + d.getMinutes();
+        }
+      }
     } else {
-      const [h, m] = clockInTime.slice(0, 5).split(':').map(Number);
-      clockInMins = h * 60 + (m || 0);
+      const match = rawStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i) ||
+                    rawStr.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+      if (match) {
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2] || '0', 10);
+        const ampm = match[3]?.toUpperCase();
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        clockInMins = h * 60 + (isNaN(m) ? 0 : m);
+      } else {
+        const [h, m] = rawStr.split(':').map(Number);
+        if (!isNaN(h)) clockInMins = h * 60 + (!isNaN(m) ? m : 0);
+      }
     }
   } catch {
-    const d = new Date(clockInTime);
-    clockInMins = d.getHours() * 60 + d.getMinutes();
+    clockInMins = 0;
+  }
+
+  if (isNaN(clockInMins) || clockInMins <= 0) {
+    return 'present';
   }
 
   // If no shift is provided, default to standard office timings: 09:00 AM start, 15m grace (09:15), late up to 10:30, half day up to 14:00
@@ -61,7 +83,7 @@ export function getEffectiveAttendanceStatus(
   isRegularized: boolean = false
 ): 'present' | 'late' | 'half_day' | 'absent' | 'holiday' | 'approved_leave' | 'paid_leave' {
   if (!record) return 'absent';
-  if (isRegularized || record.is_regularized || record.override_status === 'present') return 'present';
+  if (isRegularized || record.is_regularized || record.override_status === 'present' || record.status === 'present') return 'present';
   
   if (record.status === 'holiday' || record.status === 'approved_leave' || record.status === 'paid_leave') {
     return record.status;

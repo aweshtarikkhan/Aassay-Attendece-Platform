@@ -4,17 +4,17 @@ import { format, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, startOfW
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Clock, CalendarDays, MapPin, CheckCircle2, AlertCircle, XCircle, FileText, Lock, User, ChevronRight, Fingerprint, Umbrella, Navigation, Loader2 } from 'lucide-react';
+import { LayoutGrid, ArrowRight, Clock, CalendarDays, MapPin, CheckCircle2, AlertCircle, XCircle, FileText, Lock, User, ChevronRight, Fingerprint, Umbrella, Navigation, Loader2, Laptop, Sparkles, CheckSquare, Receipt, FileCheck, History, MessageCircle, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getEffectiveAttendanceStatus, computeShiftStatus } from '@/lib/shift-utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RegularizeDialog } from '@/components/shared/RegularizeDialog';
-import { safeFormatTime } from '@/lib/utils';
+import { safeFormatTime, safeFormatDate, safeParseDate } from '@/lib/utils';
 import { resolveCurrentEmployee, getCachedEmployee } from '@/lib/employee-utils';
-import { captureAccurateLocation, checkLocationPermission } from '@/lib/geo-utils';
+import { captureAccurateLocation, checkLocationPermission, isLaptopOrDesktop } from '@/lib/geo-utils';
 
 export default function Dashboard({ session }: { session: any }) {
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
@@ -58,11 +58,15 @@ export default function Dashboard({ session }: { session: any }) {
   const [dateFilter, setDateFilter] = useState('this_month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [myTasks, setMyTasks] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [currentAdSlide, setCurrentAdSlide] = useState(0);
   const [adAutoSlideInterval, setAdAutoSlideInterval] = useState(5000);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+
 
   // Modals
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -161,6 +165,29 @@ export default function Dashboard({ session }: { session: any }) {
           try { localStorage.setItem('attendance_today_record', JSON.stringify(todayData)); } catch {}
         }
         if (monthData) setMonthRecords(monthData);
+
+        try {
+          const { data: aRows } = await supabase
+            .from('task_assignees')
+            .select('task_id')
+            .eq('employee_id', empData.id);
+          const aTaskIds = aRows?.map((r: any) => r.task_id) || [];
+
+          let tQ = supabase.from('employee_tasks').select('*');
+          if (aTaskIds.length > 0) {
+            tQ = tQ.or(`employee_id.eq.${empData.id},id.in.(${aTaskIds.join(',')})`);
+          } else {
+            tQ = tQ.eq('employee_id', empData.id);
+          }
+
+          const { data: tData } = await tQ
+            .order('created_at', { ascending: false })
+            .limit(5);
+          if (tData) {
+            const activeOnly = tData.filter((t: any) => !['done', 'completed'].includes((t.status || '').toLowerCase()));
+            setMyTasks(activeOnly.slice(0, 3));
+          }
+        } catch (_tErr) {}
         if (holsData) {
           setUpcomingHolidays(holsData);
           try { localStorage.setItem('attendance_holidays', JSON.stringify(holsData)); } catch {}
@@ -246,6 +273,29 @@ export default function Dashboard({ session }: { session: any }) {
         }
 
         if (monthData) setMonthRecords(monthData);
+
+        try {
+          const { data: aRows } = await supabase
+            .from('task_assignees')
+            .select('task_id')
+            .eq('employee_id', empData.id);
+          const aTaskIds = aRows?.map((r: any) => r.task_id) || [];
+
+          let tQ = supabase.from('employee_tasks').select('*');
+          if (aTaskIds.length > 0) {
+            tQ = tQ.or(`employee_id.eq.${empData.id},id.in.(${aTaskIds.join(',')})`);
+          } else {
+            tQ = tQ.eq('employee_id', empData.id);
+          }
+
+          const { data: tData } = await tQ
+            .order('created_at', { ascending: false })
+            .limit(5);
+          if (tData) {
+            const activeOnly = tData.filter((t: any) => !['done', 'completed'].includes((t.status || '').toLowerCase()));
+            setMyTasks(activeOnly.slice(0, 3));
+          }
+        } catch (_tErr) {}
         setTodayRecord(activeRecord);
         if (holsData) setUpcomingHolidays(holsData);
 
@@ -275,7 +325,7 @@ export default function Dashboard({ session }: { session: any }) {
         const rMap: Record<string, any> = {};
         (monthRegData || []).forEach(r => {
           if (r.status === 'approved') {
-            rMap[r.date] = r;
+            rMap[(r.date || r.attendance_date || '').slice(0, 10)] = r;
           }
         });
 
@@ -286,7 +336,7 @@ export default function Dashboard({ session }: { session: any }) {
           dateInterval = [];
         }
 
-        const joiningDateStr = empData.joining_date || format(new Date(empData.created_at || now), 'yyyy-MM-dd');
+        const joiningDateStr = empData.joining_date || safeFormatDate(empData.created_at || now, 'yyyy-MM-dd');
         
         const eligibleDays = dateInterval.filter(d => {
           const dStr = format(d, 'yyyy-MM-dd');
@@ -472,6 +522,19 @@ export default function Dashboard({ session }: { session: any }) {
     }
   };
 
+
+
+  // Mobile auto-punch trigger when opened via scanned QR code
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action && (action === 'in' || action === 'out') && employee?.id) {
+      if (action === 'in' && todayRecord?.clock_in_time) return;
+      if (action === 'out' && (!todayRecord?.clock_in_time || todayRecord?.clock_out_time)) return;
+      setSearchParams({}, { replace: true });
+      handleClockInOut(action as 'in' | 'out');
+    }
+  }, [searchParams, employee?.id, todayRecord]);
+
   const requestClockInOut = (type: 'in' | 'out') => {
     setClockType(type);
     setClockConfirmOpen(true);
@@ -518,21 +581,33 @@ export default function Dashboard({ session }: { session: any }) {
         return;
       }
       
-      // Pre-check browser location permission
-      const permState = await checkLocationPermission();
-      if (permState === 'denied') {
-        toast({
-          title: 'Location Permission Blocked',
-          description: 'Please enable Location in your browser address bar (lock icon) for pinpoint GPS attendance tracking.',
-          variant: 'destructive',
-        });
-      }
+      // Location handling: Laptop/Desktop records "Login from Laptop/Desktop" directly without GPS prompt
+      let locationData: any = null;
+      if (isLaptopOrDesktop()) {
+        locationData = {
+          lat: null,
+          lng: null,
+          address: "Login from Laptop/Desktop",
+          source: "laptop",
+          device: "Laptop/Desktop"
+        };
+      } else {
+        // Pre-check browser location permission for mobile devices
+        const permState = await checkLocationPermission();
+        if (permState === 'denied') {
+          toast({
+            title: 'Location Permission Blocked',
+            description: 'Please enable Location in your browser address bar (lock icon) for pinpoint GPS attendance tracking.',
+            variant: 'destructive',
+          });
+        }
 
-      // Capture precise GPS / WiFi location
-      setCapturingLocation(true);
-      toast({ title: 'Capturing Location...', description: 'Acquiring precise coordinates from your device...' });
-      const locationData = await captureAccurateLocation();
-      setCapturingLocation(false);
+        // Capture precise GPS / WiFi location on Mobile
+        setCapturingLocation(true);
+        toast({ title: 'Capturing Location...', description: 'Acquiring precise coordinates from your device...' });
+        locationData = await captureAccurateLocation();
+        setCapturingLocation(false);
+      }
 
       if (type === 'in') {
         // Ensure any previous unclosed punches are auto closed before marking new punch
@@ -579,7 +654,9 @@ export default function Dashboard({ session }: { session: any }) {
 
         setTodayRecord(savedRecord);
         try { localStorage.setItem('attendance_today_record', JSON.stringify(savedRecord)); } catch {}
-        if (locationData?.source === 'fallback') {
+        if (isLaptopOrDesktop()) {
+          toast({ title: '✅ Clocked In', description: 'Login from Laptop/Desktop' });
+        } else if (locationData?.source === 'fallback') {
           toast({ title: 'Clocked In', description: 'Attendance recorded via Web Check-In (Location access was unavailable on this device).' });
         } else {
           toast({ title: '✅ Clocked In', description: locationData?.address ? `Attendance marked: ${locationData.address}` : 'Attendance marked.' });
@@ -635,7 +712,9 @@ export default function Dashboard({ session }: { session: any }) {
 
         setTodayRecord(updatedRecord);
         try { localStorage.setItem('attendance_today_record', JSON.stringify(updatedRecord)); } catch {}
-        if (locationData?.source === 'fallback') {
+        if (isLaptopOrDesktop()) {
+          toast({ title: '✅ Clocked Out', description: 'Login from Laptop/Desktop' });
+        } else if (locationData?.source === 'fallback') {
           toast({ title: 'Clocked Out', description: 'Clock-out recorded via Web Check-In.' });
         } else {
           toast({ title: '✅ Clocked Out', description: locationData?.address ? `Clock-out saved: ${locationData.address}` : 'Your shift has ended.' });
@@ -787,6 +866,16 @@ export default function Dashboard({ session }: { session: any }) {
                 ? `Clocked in at ${safeFormatTime(todayRecord.clock_in_time)}${todayRecord.date !== format(new Date(), 'yyyy-MM-dd') ? ` (${todayRecord.date})` : ''}` 
                 : 'You have not clocked in yet.'}
             </p>
+            {todayRecord?.clock_in_location?.address && (
+              <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 flex items-center gap-1 font-medium">
+                {todayRecord.clock_in_location.source === 'laptop' || todayRecord.clock_in_location.address.toLowerCase().includes('laptop') ? (
+                  <Laptop className="w-3 h-3 text-indigo-500 shrink-0" />
+                ) : (
+                  <MapPin className="w-3 h-3 text-orange-500 shrink-0" />
+                )}
+                <span>{todayRecord.clock_in_location.address}</span>
+              </p>
+            )}
             {todayRecord?.clock_out_time && (todayRecord.is_auto_clock_out || todayRecord.clock_out_location?.auto || todayRecord.clock_out_location?.is_auto_clock_out) && (
               <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200">
                 <AlertCircle className="w-3 h-3" /> Auto Logout ({safeFormatTime(todayRecord.clock_out_time)})
@@ -820,6 +909,222 @@ export default function Dashboard({ session }: { session: any }) {
               {(todayRecord.is_auto_clock_out || todayRecord.clock_out_location?.auto || todayRecord.clock_out_location?.is_auto_clock_out) && (
                 <span className="text-[10px] text-amber-600 font-bold mt-1">Auto Logged Out</span>
               )}
+            </div>
+          )}
+        </div>
+
+        
+        {/* Quick Access Portal Services - History, Leaves, Tasks, Expenses, All Pages */}
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-4 bg-orange-500 rounded-full" />
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">Quick Access & Services</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
+              className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-transform"
+            >
+              <span>All Pages</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Primary 4 Hero Feature Cards (2x2 on mobile, 4 columns on desktop) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-3">
+            {/* 1. Tasks */}
+            <button
+              type="button"
+              onClick={() => navigate('/tasks')}
+              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-orange-50/90 to-amber-50/40 dark:from-orange-950/20 dark:to-slate-800 border border-orange-100 dark:border-orange-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
+            >
+              <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Tasks</span>
+                  {myTasks.length > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1 bg-orange-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {myTasks.length}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
+                  {myTasks.length > 0 ? `${myTasks.length} Pending` : 'View & Manage'}
+                </p>
+              </div>
+            </button>
+
+            {/* 2. Expenses */}
+            <button
+              type="button"
+              onClick={() => navigate('/expenses')}
+              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/40 dark:from-emerald-950/20 dark:to-slate-800 border border-emerald-100 dark:border-emerald-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Expenses</span>
+                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
+                  Bike KM & Bills
+                </p>
+              </div>
+            </button>
+
+            {/* 3. Leaves */}
+            <button
+              type="button"
+              onClick={() => navigate('/leaves')}
+              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/40 dark:from-blue-950/20 dark:to-slate-800 border border-blue-100 dark:border-blue-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <Umbrella className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Leaves</span>
+                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
+                  {stats?.leaves_left ?? 15} Days Left
+                </p>
+              </div>
+            </button>
+
+            {/* 4. History */}
+            <button
+              type="button"
+              onClick={() => navigate('/history')}
+              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-indigo-50/90 to-violet-50/40 dark:from-indigo-950/20 dark:to-slate-800 border border-indigo-100 dark:border-indigo-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
+            >
+              <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                <History className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">History</span>
+                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
+                  Punches & Logs
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Secondary Quick Action Shortcuts (Chat, Documents, Holidays, Settings, All Pages) */}
+          <div className="grid grid-cols-5 gap-2 pt-1 border-t border-gray-100 dark:border-slate-700/60">
+            {/* Chat */}
+            <button
+              type="button"
+              onClick={() => navigate('/chat')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Chat</span>
+            </button>
+
+            {/* Documents */}
+            <button
+              type="button"
+              onClick={() => navigate('/documents')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <FileCheck className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Docs</span>
+            </button>
+
+            {/* Holidays */}
+            <button
+              type="button"
+              onClick={() => navigate('/holidays')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <CalendarDays className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Holidays</span>
+            </button>
+
+            {/* Settings */}
+            <button
+              type="button"
+              onClick={() => navigate('/settings')}
+              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Settings className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Settings</span>
+            </button>
+
+            {/* All Pages Trigger */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-orange-50/60 dark:bg-orange-950/20 hover:bg-orange-100/60 transition-all active:scale-95 group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                <LayoutGrid className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1">All Pages</span>
+            </button>
+          </div>
+        </div>
+
+        {/* My Assigned Tasks Widget */}
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center shrink-0">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">My Assigned Tasks</h3>
+                <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                  {myTasks.length === 0 ? 'No pending tasks assigned' : `${myTasks.length} active task${myTasks.length > 1 ? 's' : ''} in progress`}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/tasks')}
+              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-xs font-semibold rounded-xl"
+            >
+              View All <ChevronRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
+
+          {myTasks.length === 0 ? (
+            <div className="p-4 bg-gray-50 dark:bg-slate-900/50 rounded-2xl text-center text-xs text-gray-500 dark:text-slate-400">
+              🎉 All caught up! No pending tasks right now.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {myTasks.map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => navigate('/tasks')}
+                  className="p-3 bg-gray-50 dark:bg-slate-900/50 hover:bg-orange-50/50 dark:hover:bg-slate-800 transition-colors rounded-2xl flex items-center justify-between cursor-pointer border border-transparent hover:border-orange-200"
+                >
+                  <div className="min-w-0 flex-1 mr-3">
+                    <p className="font-bold text-xs text-gray-900 dark:text-white truncate">{t.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-white dark:bg-slate-800 border text-gray-600 dark:text-slate-300">
+                        {t.status}
+                      </span>
+                      {t.due_date && (
+                        <span className="text-[10px] text-gray-500 dark:text-slate-400">
+                          Due: {safeFormatDate(t.due_date, 'dd MMM')} {t.due_time || ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -940,6 +1245,24 @@ export default function Dashboard({ session }: { session: any }) {
             <FileText className="w-24 h-24 text-blue-500/10 dark:text-blue-400/5 absolute -right-4 -bottom-4 transform rotate-12 pointer-events-none" />
           </div>
 
+        {/* Expenses & Travel Claims Action */}
+          <div 
+            onClick={() => navigate('/expenses')}
+            className="bg-orange-50 dark:bg-orange-950/20 rounded-3xl p-5 shadow-sm border border-orange-100 dark:border-orange-800 flex justify-between items-center relative overflow-hidden cursor-pointer hover:shadow-md transition-all active:scale-95 mt-3"
+          >
+            <div className="relative z-10 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center shrink-0">
+                <Receipt className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-black text-gray-900 dark:text-white leading-none mb-1">Expenses & Travel Claims</span>
+                <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 tracking-wider uppercase">Log Bike Travel & Bills</span>
+              </div>
+            </div>
+            <ChevronRight className="w-6 h-6 text-orange-300 dark:text-orange-500 relative z-10" />
+            <Receipt className="w-24 h-24 text-orange-500/10 dark:text-orange-400/5 absolute -right-4 -bottom-4 transform rotate-12 pointer-events-none" />
+          </div>
+
         {/* Upcoming Holiday (moved below Apply for Leave) */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 rounded-2xl p-4 shadow-sm border border-blue-100 dark:border-slate-700">
             <div className="flex justify-between items-center mb-3">
@@ -958,10 +1281,10 @@ export default function Dashboard({ session }: { session: any }) {
                   <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-900/50 p-3 rounded-xl shadow-sm border border-white dark:border-slate-700/50">
                     <div>
                       <p className="font-bold text-sm text-gray-900 dark:text-white">{h.name}</p>
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-slate-400 mt-1">{format(new Date(h.date), 'dd MMMM yyyy')}</p>
+                      <p className="text-[10px] font-medium text-gray-500 dark:text-slate-400 mt-1">{safeFormatDate(h.date, 'dd MMMM yyyy')}</p>
                     </div>
                     <div className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold whitespace-nowrap shadow-inner">
-                      In {Math.ceil((new Date(h.date).getTime() - new Date().getTime()) / (1000 * 3600 * 24))} days
+                      In {(() => { const hd = safeParseDate(h.date); return hd ? Math.max(0, Math.ceil((hd.getTime() - Date.now()) / (1000 * 3600 * 24))) : 0; })()} days
                     </div>
                   </div>
                 ))}
@@ -1019,17 +1342,30 @@ export default function Dashboard({ session }: { session: any }) {
                 {clockType === 'in' ? 'Confirm Clock In' : 'Confirm Clock Out'}
               </DialogTitle>
               <DialogDescription className="text-center text-sm text-gray-500 dark:text-slate-400">
-                {clockType === 'in' 
-                  ? 'Are you ready to mark your attendance for today? Your live GPS location will be captured.' 
-                  : 'Are you sure you want to end your shift and clock out for today?'}
+                {isLaptopOrDesktop()
+                  ? `Clocking ${clockType === 'in' ? 'in' : 'out'} from this laptop/desktop will record "Login from Laptop/Desktop" as your location.`
+                  : (clockType === 'in' 
+                      ? 'Are you ready to mark your attendance for today? Your live GPS location will be captured.' 
+                      : 'Are you sure you want to end your shift and clock out for today?')}
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex items-center gap-2 mt-4 px-4 py-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900">
-              <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
-              <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium leading-snug">
-                Precise GPS location will be captured with pin-point accuracy. Please keep your GPS/Location Services ON.
-              </p>
+              {isLaptopOrDesktop() ? (
+                <>
+                  <Laptop className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium leading-snug">
+                    Clocking from Laptop/Desktop. Location will be automatically recorded as <strong>Login from Laptop/Desktop</strong>.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
+                  <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium leading-snug">
+                    Precise GPS location will be captured with pin-point accuracy. Please keep your GPS/Location Services ON.
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="flex gap-3 w-full mt-4">
@@ -1056,6 +1392,8 @@ export default function Dashboard({ session }: { session: any }) {
           </div>
         </DialogContent>
       </Dialog>
+
+
     </div>
   );
 }

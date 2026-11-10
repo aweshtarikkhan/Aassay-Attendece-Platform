@@ -7,6 +7,7 @@ import { format, parseISO } from 'date-fns';
 import { CalendarDays, MapPin, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { resolveCurrentEmployee } from '@/lib/employee-utils';
+import { safeFormatDate, safeParseDate } from '@/lib/utils';
 
 export default function HolidaysPage({ session }: { session: any }) {
   const navigate = useNavigate();
@@ -48,12 +49,12 @@ export default function HolidaysPage({ session }: { session: any }) {
     loadHolidays();
   }, [session]);
 
-  const upcomingHolidays = holidays.filter(h => new Date(h.date) >= new Date());
-  const pastHolidays = holidays.filter(h => new Date(h.date) < new Date());
+  const upcomingHolidays = holidays.filter(h => { const d = safeParseDate(h.date); return d ? d >= new Date() : false; });
+  const pastHolidays = holidays.filter(h => { const d = safeParseDate(h.date); return d ? d < new Date() : false; });
 
   // Group by month
   const groupedHolidays = upcomingHolidays.reduce((acc, curr) => {
-    const month = format(parseISO(curr.date), 'MMMM yyyy');
+    const month = safeFormatDate(curr.date, 'MMMM yyyy');
     if (!acc[month]) acc[month] = [];
     acc[month].push(curr);
     return acc;
@@ -91,12 +92,12 @@ export default function HolidaysPage({ session }: { session: any }) {
                     <div key={holiday.id} className="bg-white dark:bg-slate-800 rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-slate-700 flex items-center justify-between">
                       <div className="flex gap-4 items-center">
                         <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex flex-col items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-orange-600 dark:text-orange-400 leading-none mb-1">{format(parseISO(holiday.date), 'MMM')}</span>
-                          <span className="text-lg font-black text-[#0a192f] dark:text-white leading-none">{format(parseISO(holiday.date), 'dd')}</span>
+                          <span className="text-xs font-bold text-orange-600 dark:text-orange-400 leading-none mb-1">{safeFormatDate(holiday.date, 'MMM')}</span>
+                          <span className="text-lg font-black text-[#0a192f] dark:text-white leading-none">{safeFormatDate(holiday.date, 'dd')}</span>
                         </div>
                         <div>
                           <h3 className="font-bold text-gray-900 dark:text-white text-base">{holiday.name}</h3>
-                          <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-slate-500 mt-0.5">{format(parseISO(holiday.date), 'EEEE')} • {holiday.type} Holiday</p>
+                          <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-slate-500 mt-0.5">{safeFormatDate(holiday.date, 'EEEE')} • {holiday.type} Holiday</p>
                         </div>
                       </div>
                     </div>
@@ -114,12 +115,12 @@ export default function HolidaysPage({ session }: { session: any }) {
                   <div key={holiday.id} className="bg-gray-50/80 dark:bg-slate-900/40 rounded-3xl p-4 border border-gray-100 dark:border-slate-700/50 flex items-center justify-between">
                     <div className="flex gap-4 items-center">
                       <div className="w-12 h-12 rounded-2xl bg-gray-200/50 dark:bg-slate-800 flex flex-col items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-gray-500 dark:text-slate-400 leading-none mb-1">{format(parseISO(holiday.date), 'MMM')}</span>
-                        <span className="text-lg font-black text-gray-700 dark:text-slate-300 leading-none">{format(parseISO(holiday.date), 'dd')}</span>
+                        <span className="text-xs font-bold text-gray-500 dark:text-slate-400 leading-none mb-1">{safeFormatDate(holiday.date, 'MMM')}</span>
+                        <span className="text-lg font-black text-gray-700 dark:text-slate-300 leading-none">{safeFormatDate(holiday.date, 'dd')}</span>
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-600 dark:text-slate-300 text-base">{holiday.name}</h3>
-                        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-slate-500 mt-0.5">{format(parseISO(holiday.date), 'EEEE')} • {holiday.type}</p>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-slate-500 mt-0.5">{safeFormatDate(holiday.date, 'EEEE')} • {holiday.type}</p>
                       </div>
                     </div>
                   </div>

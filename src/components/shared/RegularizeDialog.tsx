@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { safeFormatDate, safeFormatTime, toSafeIsoTime } from "@/lib/utils";
 
 interface RegularizeDialogProps {
   open: boolean;
@@ -61,27 +62,8 @@ export function RegularizeDialog({
   useEffect(() => {
     if (open) {
       setDate(defaultDate || format(new Date(), 'yyyy-MM-dd'));
-      if (defaultClockIn) {
-        try {
-          const d = new Date(defaultClockIn);
-          setClockInTime(format(d, 'HH:mm'));
-        } catch {
-          setClockInTime('09:00');
-        }
-      } else {
-        setClockInTime('09:00');
-      }
-
-      if (defaultClockOut) {
-        try {
-          const d = new Date(defaultClockOut);
-          setClockOutTime(format(d, 'HH:mm'));
-        } catch {
-          setClockOutTime('18:00');
-        }
-      } else {
-        setClockOutTime('18:00');
-      }
+      setClockInTime(safeFormatTime(defaultClockIn, '09:00', 'HH:mm'));
+      setClockOutTime(safeFormatTime(defaultClockOut, '18:00', 'HH:mm'));
       setReason('');
     }
   }, [open, defaultDate, defaultClockIn, defaultClockOut]);
@@ -117,8 +99,8 @@ export function RegularizeDialog({
 
     setLoading(true);
     try {
-      const requestedInIso = clockInTime ? new Date(`${date}T${clockInTime}:00`).toISOString() : null;
-      const requestedOutIso = clockOutTime ? new Date(`${date}T${clockOutTime}:00`).toISOString() : null;
+      const requestedInIso = toSafeIsoTime(date, clockInTime);
+      const requestedOutIso = toSafeIsoTime(date, clockOutTime);
 
       // 1. Insert regularization request
       const { error: regError } = await supabase.from('attendance_regularizations').insert({

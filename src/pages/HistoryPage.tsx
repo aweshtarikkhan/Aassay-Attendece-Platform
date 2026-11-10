@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, parseISO, subMonths, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isSameDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, AlertCircle, Clock, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, AlertCircle, Clock, ArrowLeft, Laptop, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getEffectiveAttendanceStatus } from '@/lib/shift-utils';
+import { safeFormatTime, safeFormatDate, safeParseDate } from '@/lib/utils';
 import { RegularizeDialog } from '@/components/shared/RegularizeDialog';
 import { resolveCurrentEmployee, getCachedEmployee } from '@/lib/employee-utils';
 
@@ -88,12 +89,18 @@ export default function HistoryPage({ session }: { session: any }) {
             .select('*, shifts(*)')
             .eq('employee_id', empData.id)
             .maybeSingle(),
-          supabase
-            .from('attendance_regularizations')
-            .select('*')
-            .eq('employee_id', empData.id)
-            .gte('date', start)
-            .lte('date', end),
+          (async () => {
+            const q1 = await supabase.from('attendance_regularizations').select('*').eq('employee_id', empData.id).gte('date', start).lte('date', end);
+            let combined = q1.data || [];
+            if (empData.auth_user_id && empData.auth_user_id !== empData.id) {
+              const q2 = await supabase.from('attendance_regularizations').select('*').eq('employee_id', empData.auth_user_id).gte('date', start).lte('date', end);
+              if (q2.data && q2.data.length > 0) {
+                const existingIds = new Set(combined.map((x: any) => x.id));
+                q2.data.forEach((x: any) => { if (!existingIds.has(x.id)) combined.push(x); });
+              }
+            }
+            return { data: combined, error: q1.error };
+          })(),
           (supabase as any)
             .from('attendance')
             .select('*')
@@ -122,7 +129,11 @@ export default function HistoryPage({ session }: { session: any }) {
 
         const rMap: Record<string, any> = {};
         (regData || []).forEach((r: any) => {
-          rMap[r.date] = r;
+          const dStr = (r.date || r.attendance_date || '').slice(0, 10);
+          if (dStr) {
+            if (rMap[dStr]?.status === 'approved' && r.status !== 'approved') return;
+            rMap[dStr] = r;
+          }
         });
         setRegularizationsMap(rMap);
 
@@ -136,6 +147,7 @@ export default function HistoryPage({ session }: { session: any }) {
           const ds = r.attendance_date;
           if (ds) {
             const existing = attMap[ds] || {};
+            const isReg = r.is_regularized || r.override_status === 'present' || existing.is_regularized || existing.status === 'present';
             attMap[ds] = {
               ...existing,
               id: existing.id || r.id,
@@ -143,13 +155,14 @@ export default function HistoryPage({ session }: { session: any }) {
               employee_id: r.employee_id,
               clock_in_time: existing.clock_in_time || r.clock_in_time,
               clock_out_time: existing.clock_out_time || r.clock_out_time,
-              status: existing.status || r.override_status || r.status,
+              status: isReg ? 'present' : (r.override_status || existing.status || r.status),
               override_status: r.override_status,
+              is_regularized: isReg,
             };
           }
         });
 
-        const joiningDateStr = empData.joining_date || format(new Date(empData.created_at || new Date()), 'yyyy-MM-dd');
+        const joiningDateStr = empData.joining_date || safeFormatDate(empData.created_at || new Date(), 'yyyy-MM-dd');
         const monthDays = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
         // Show days up to today for past/current month
         const eligibleDays = monthDays.filter(d => {
@@ -179,21 +192,32 @@ export default function HistoryPage({ session }: { session: any }) {
           }
 
           if (isApprovedReg) {
+            const clkIn = reg.requested_clock_in
+              ? (reg.requested_clock_in.includes('T') ? reg.requested_clock_in : `${ds}T${reg.requested_clock_in}`)
+              : (existing?.clock_in_time || `${ds}T09:30:00`);
+            const clkOut = reg.requested_clock_out
+              ? (reg.requested_clock_out.includes('T') ? reg.requested_clock_out : `${ds}T${reg.requested_clock_out}`)
+              : (existing?.clock_out_time || `${ds}T18:30:00`);
+
             return {
               id: existing?.id || `reg-${ds}`,
               date: ds,
               status: 'present',
-              clock_in_time: existing?.clock_in_time || (reg.requested_clock_in ? `${ds}T${reg.requested_clock_in}` : `${ds}T09:30:00`),
-              clock_out_time: existing?.clock_out_time || (reg.requested_clock_out ? `${ds}T${reg.requested_clock_out}` : `${ds}T18:30:00`),
+              clock_in_time: clkIn,
+              clock_out_time: clkOut,
               is_regularized: true,
+              clock_in_location: existing?.clock_in_location || null,
+              clock_out_location: existing?.clock_out_location || null,
             };
           }
 
           if (existing) {
-            const calculatedStatus = getEffectiveAttendanceStatus(existing, shift, false);
+            const isReg = isApprovedReg || existing.is_regularized || existing.override_status === 'present' || existing.status === 'present';
+            const calculatedStatus = getEffectiveAttendanceStatus(existing, shift, isReg);
             return {
               ...existing,
-              status: calculatedStatus,
+              status: isReg ? 'present' : calculatedStatus,
+              is_regularized: isReg,
             };
           }
 
@@ -219,12 +243,20 @@ export default function HistoryPage({ session }: { session: any }) {
           }
 
           if (isAbsent || isPendingReg) {
+            const clkIn = reg?.requested_clock_in
+              ? (reg.requested_clock_in.includes('T') ? reg.requested_clock_in : `${ds}T${reg.requested_clock_in}`)
+              : (existing?.clock_in_time || null);
+            const clkOut = reg?.requested_clock_out
+              ? (reg.requested_clock_out.includes('T') ? reg.requested_clock_out : `${ds}T${reg.requested_clock_out}`)
+              : (existing?.clock_out_time || null);
             return {
-              id: `absent-${ds}`,
+              id: existing?.id || `absent-${ds}`,
               date: ds,
-              status: 'absent',
-              clock_in_time: reg?.requested_clock_in ? `${ds}T${reg.requested_clock_in}` : null,
-              clock_out_time: reg?.requested_clock_out ? `${ds}T${reg.requested_clock_out}` : null,
+              status: existing ? getEffectiveAttendanceStatus(existing, shift, false) : 'absent',
+              clock_in_time: clkIn,
+              clock_out_time: clkOut,
+              clock_in_location: existing?.clock_in_location || null,
+              clock_out_location: existing?.clock_out_location || null,
             };
           }
           
@@ -355,12 +387,18 @@ export default function HistoryPage({ session }: { session: any }) {
           
           <div className="grid grid-cols-7 gap-1">
             {(() => {
-              const monthStart = startOfMonth(currentMonth);
+              const validCurrent = safeParseDate(currentMonth) || new Date();
+              const monthStart = startOfMonth(validCurrent);
               const monthEnd = endOfMonth(monthStart);
               const startDate = startOfWeek(monthStart);
               const endDate = endOfWeek(monthEnd);
               const dateFormat = "yyyy-MM-dd";
-              const days = eachDayOfInterval({ start: startDate, end: endDate });
+              let days: Date[] = [];
+              try {
+                days = eachDayOfInterval({ start: startDate, end: endDate });
+              } catch {
+                days = [];
+              }
 
               return days.map((day, i) => {
                 const dateStr = format(day, dateFormat);
@@ -460,7 +498,7 @@ export default function HistoryPage({ session }: { session: any }) {
                     return (
                       <tr key={record.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900 dark:text-white">
-                          {format(parseISO(record.date), 'EEE, MMM dd')}
+                          {safeFormatDate(record.date, 'EEE, MMM dd')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold border ${getStatusColor(record.status)}`}>
@@ -470,23 +508,47 @@ export default function HistoryPage({ session }: { session: any }) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-slate-200 font-medium">
                           {record.clock_in_time ? (
-                            <div className="flex items-center">
-                              <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-                              {format(new Date(record.clock_in_time), 'hh:mm a')}
+                            <div className="flex flex-col">
+                              <div className="flex items-center">
+                                <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                                {safeFormatTime(record.clock_in_time, '-', 'hh:mm a')}
+                              </div>
+                              {record.clock_in_location?.address && (
+                                <div className="text-[10px] text-gray-400 dark:text-slate-500 truncate max-w-[200px] mt-0.5 flex items-center gap-1 font-normal" title={record.clock_in_location.address}>
+                                  {record.clock_in_location.source === 'laptop' || record.clock_in_location.address.toLowerCase().includes('laptop') ? (
+                                    <Laptop className="w-3 h-3 text-indigo-500 shrink-0" />
+                                  ) : (
+                                    <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                                  )}
+                                  <span>{record.clock_in_location.address}</span>
+                                </div>
+                              )}
                             </div>
                           ) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-slate-200 font-medium">
                           {record.clock_out_time ? (
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center">
-                                <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-                                {format(new Date(record.clock_out_time), 'hh:mm a')}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center">
+                                  <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                                  {safeFormatTime(record.clock_out_time, '-', 'hh:mm a')}
+                                </div>
+                                {(record.is_auto_clock_out || record.clock_out_location?.auto || record.clock_out_location?.is_auto_clock_out) && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400">
+                                    Auto Logout
+                                  </span>
+                                )}
                               </div>
-                              {(record.is_auto_clock_out || record.clock_out_location?.auto || record.clock_out_location?.is_auto_clock_out) && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400">
-                                  Auto Logout
-                                </span>
+                              {record.clock_out_location?.address && (
+                                <div className="text-[10px] text-gray-400 dark:text-slate-500 truncate max-w-[200px] mt-0.5 flex items-center gap-1 font-normal" title={record.clock_out_location.address}>
+                                  {record.clock_out_location.source === 'laptop' || record.clock_out_location.address.toLowerCase().includes('laptop') ? (
+                                    <Laptop className="w-3 h-3 text-indigo-500 shrink-0" />
+                                  ) : (
+                                    <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                                  )}
+                                  <span>{record.clock_out_location.address}</span>
+                                </div>
                               )}
                             </div>
                           ) : '-'}
@@ -549,10 +611,10 @@ export default function HistoryPage({ session }: { session: any }) {
                 <div key={record.id} className={`flex items-center justify-between p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 border-l-4 ${leftBorderColor()}`}>
                   <div className="flex flex-col gap-1 min-w-[60px]">
                     <div className="font-bold text-gray-900 dark:text-white text-xs">
-                      {format(parseISO(record.date), 'MMM dd')}
+                      {safeFormatDate(record.date, 'MMM dd')}
                     </div>
                     <div className="text-[10px] text-gray-500 dark:text-slate-400 font-medium">
-                      {format(parseISO(record.date), 'EEE')}
+                      {safeFormatDate(record.date, 'EEE')}
                     </div>
                   </div>
                   
@@ -562,9 +624,9 @@ export default function HistoryPage({ session }: { session: any }) {
                       <span className="ml-1">{formatStatusLabel(record.status)}</span>
                     </div>
                     <div className="flex items-center text-[10px] font-medium text-gray-600 dark:text-slate-300 gap-1.5 flex-wrap justify-center">
-                       <span>{record.clock_in_time ? format(new Date(record.clock_in_time), 'HH:mm') : '--:--'}</span>
+                       <span>{safeFormatTime(record.clock_in_time, '--:--', 'HH:mm')}</span>
                        <span className="text-gray-300 dark:text-slate-600">-</span>
-                       <span>{record.clock_out_time ? format(new Date(record.clock_out_time), 'HH:mm') : '--:--'}</span>
+                       <span>{safeFormatTime(record.clock_out_time, '--:--', 'HH:mm')}</span>
                        {(record.is_auto_clock_out || record.clock_out_location?.auto || record.clock_out_location?.is_auto_clock_out) && (
                          <span className="text-[8px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-1 py-0.5 rounded border border-amber-200/50">
                            Auto Logout
@@ -572,8 +634,13 @@ export default function HistoryPage({ session }: { session: any }) {
                        )}
                     </div>
                     {record.clock_in_location?.address && (
-                      <div className="text-[9px] text-gray-400 dark:text-slate-500 truncate max-w-[200px] mt-0.5" title={record.clock_in_location.address}>
-                        📍 {record.clock_in_location.address.toLowerCase().includes('russia') ? 'Office Network / Web Check-In' : record.clock_in_location.address}
+                      <div className="text-[9px] text-gray-400 dark:text-slate-500 truncate max-w-[200px] mt-0.5 flex items-center gap-1 justify-center" title={record.clock_in_location.address}>
+                        {record.clock_in_location.source === 'laptop' || record.clock_in_location.address.toLowerCase().includes('laptop') ? (
+                          <Laptop className="w-3 h-3 text-indigo-500 shrink-0" />
+                        ) : (
+                          <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                        )}
+                        <span>{record.clock_in_location.address}</span>
                       </div>
                     )}
                   </div>

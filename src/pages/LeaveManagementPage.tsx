@@ -325,7 +325,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal rounded-xl", !leaveData.startDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {leaveData.startDate ? format(parseISO(leaveData.startDate), "dd/MM/yyyy") : <span>Pick a date</span>}
+                      {leaveData.startDate ? safeFormatDate(leaveData.startDate, "dd/MM/yyyy") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -341,7 +341,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal rounded-xl px-3", !leaveData.startDate && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                        <span className="truncate">{leaveData.startDate ? format(parseISO(leaveData.startDate), "dd/MM/yyyy") : "Pick a date"}</span>
+                        <span className="truncate">{leaveData.startDate ? safeFormatDate(leaveData.startDate, "dd/MM/yyyy") : "Pick a date"}</span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -355,7 +355,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal rounded-xl px-3", !leaveData.endDate && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                        <span className="truncate">{leaveData.endDate ? format(parseISO(leaveData.endDate), "dd/MM/yyyy") : "Pick a date"}</span>
+                        <span className="truncate">{leaveData.endDate ? safeFormatDate(leaveData.endDate, "dd/MM/yyyy") : "Pick a date"}</span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">

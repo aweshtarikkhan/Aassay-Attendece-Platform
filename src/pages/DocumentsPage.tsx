@@ -302,7 +302,7 @@ export default function DocumentsPage({ session }: { session: any }) {
                         {d.doc_type || 'Document'}
                       </Badge>
                       <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">
-                        {d.uploaded_at ? format(parseISO(d.uploaded_at), 'dd MMM yyyy') : ''}
+                        {safeFormatDate(d.uploaded_at, 'dd MMM yyyy', '')}
                       </span>
                     </div>
                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-xs sm:max-w-md" title={d.file_name}>
