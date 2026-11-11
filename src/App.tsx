@@ -7,7 +7,6 @@ import TasksPage from './pages/TasksPage';
 import HistoryPage from './pages/HistoryPage';
 import LeaveManagementPage from './pages/LeaveManagementPage';
 import HolidaysPage from './pages/HolidaysPage';
-import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import DocumentsPage from './pages/DocumentsPage';
@@ -57,7 +56,6 @@ function App() {
             <Route path="/history" element={<HistoryPage session={session} />} />
             <Route path="/leaves" element={<LeaveManagementPage session={session} />} />
             <Route path="/holidays" element={<HolidaysPage session={session} />} />
-            <Route path="/chat" element={<ChatPage session={session} />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/documents" element={<DocumentsPage session={session} />} />
             <Route path="/expenses" element={<ExpensesPage session={session} />} />

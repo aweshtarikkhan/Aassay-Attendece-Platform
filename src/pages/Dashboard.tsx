@@ -4,7 +4,7 @@ import { format, startOfMonth, endOfMonth, parseISO, eachDayOfInterval, startOfW
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, ArrowRight, Clock, CalendarDays, MapPin, CheckCircle2, AlertCircle, XCircle, FileText, Lock, User, ChevronRight, Fingerprint, Umbrella, Navigation, Loader2, Laptop, Sparkles, CheckSquare, Receipt, FileCheck, History, MessageCircle, Settings } from 'lucide-react';
+import { LayoutGrid, ArrowRight, Clock, CalendarDays, MapPin, CheckCircle2, AlertCircle, XCircle, FileText, Lock, User, ChevronRight, Fingerprint, Umbrella, Navigation, Loader2, Laptop, Sparkles, CheckSquare, Receipt, FileCheck, History, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getEffectiveAttendanceStatus, computeShiftStatus } from '@/lib/shift-utils';
@@ -390,19 +390,19 @@ export default function Dashboard({ session }: { session: any }) {
         const attendances = allAttendancesData || [];
         const attSet = new Set(attendances.map(a => a.date));
         const DEFAULT_ANNUAL: Record<string, number> = { casual: 12, sick: 5, el_pl: 0, comp_off: 0 };
-        const ACCRUED_TYPES = ["el_pl", "comp_off"];
 
         let leavesLeft = 0;
         ["casual", "sick", "el_pl", "comp_off"].forEach((t) => {
           const bal = (leaveBalData || []).find((b: any) => b.leave_type === t);
           const pol = (leavePoliciesData || []).find((p: any) => p.leave_type === t);
-          const isAccrued = ACCRUED_TYPES.includes(t);
           
           const dynamicUsed = (allLeavesData || [])
-            .filter(l => l.leave_type === t && l.start_date <= todayStr && !attSet.has(l.start_date))
+            .filter(l => l.leave_type === t && !attSet.has(l.start_date))
             .reduce((sum, l) => sum + (Number(l.days) || 1), 0);
 
-          const annual = isAccrued ? (bal?.accrued ?? 0) : (pol?.annual_limit ?? DEFAULT_ANNUAL[t] ?? 0);
+          const baseAnnual = Number(pol?.annual_limit ?? DEFAULT_ANNUAL[t] ?? 0);
+          const accrued = Number(bal?.accrued ?? 0);
+          const annual = Math.max(0, baseAnnual + accrued);
           leavesLeft += Math.max(0, annual - dynamicUsed);
         });
 
@@ -914,158 +914,6 @@ export default function Dashboard({ session }: { session: any }) {
         </div>
 
         
-        {/* Quick Access Portal Services - History, Leaves, Tasks, Expenses, All Pages */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-4 bg-orange-500 rounded-full" />
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">Quick Access & Services</h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
-              className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-transform"
-            >
-              <span>All Pages</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Primary 4 Hero Feature Cards (2x2 on mobile, 4 columns on desktop) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-            {/* 1. Tasks */}
-            <button
-              type="button"
-              onClick={() => navigate('/tasks')}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-orange-50/90 to-amber-50/40 dark:from-orange-950/20 dark:to-slate-800 border border-orange-100 dark:border-orange-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
-            >
-              <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                <CheckSquare className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Tasks</span>
-                  {myTasks.length > 0 && (
-                    <span className="min-w-[18px] h-[18px] px-1 bg-orange-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {myTasks.length}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
-                  {myTasks.length > 0 ? `${myTasks.length} Pending` : 'View & Manage'}
-                </p>
-              </div>
-            </button>
-
-            {/* 2. Expenses */}
-            <button
-              type="button"
-              onClick={() => navigate('/expenses')}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/40 dark:from-emerald-950/20 dark:to-slate-800 border border-emerald-100 dark:border-emerald-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
-            >
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                <Receipt className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Expenses</span>
-                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
-                  Bike KM & Bills
-                </p>
-              </div>
-            </button>
-
-            {/* 3. Leaves */}
-            <button
-              type="button"
-              onClick={() => navigate('/leaves')}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/40 dark:from-blue-950/20 dark:to-slate-800 border border-blue-100 dark:border-blue-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
-            >
-              <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                <Umbrella className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">Leaves</span>
-                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
-                  {stats?.leaves_left ?? 15} Days Left
-                </p>
-              </div>
-            </button>
-
-            {/* 4. History */}
-            <button
-              type="button"
-              onClick={() => navigate('/history')}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-indigo-50/90 to-violet-50/40 dark:from-indigo-950/20 dark:to-slate-800 border border-indigo-100 dark:border-indigo-900/40 hover:shadow-md transition-all active:scale-95 group text-left relative overflow-hidden"
-            >
-              <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                <History className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">History</span>
-                <p className="text-[10.5px] text-gray-500 dark:text-slate-400 mt-0.5 truncate">
-                  Punches & Logs
-                </p>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* My Assigned Tasks Widget */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center shrink-0">
-                <CheckSquare className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-base">My Assigned Tasks</h3>
-                <p className="text-[11px] text-gray-500 dark:text-slate-400">
-                  {myTasks.length === 0 ? 'No pending tasks assigned' : `${myTasks.length} active task${myTasks.length > 1 ? 's' : ''} in progress`}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/tasks')}
-              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-xs font-semibold rounded-xl"
-            >
-              View All <ChevronRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          </div>
-
-          {myTasks.length === 0 ? (
-            <div className="p-4 bg-gray-50 dark:bg-slate-900/50 rounded-2xl text-center text-xs text-gray-500 dark:text-slate-400">
-              🎉 All caught up! No pending tasks right now.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {myTasks.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => navigate('/tasks')}
-                  className="p-3 bg-gray-50 dark:bg-slate-900/50 hover:bg-orange-50/50 dark:hover:bg-slate-800 transition-colors rounded-2xl flex items-center justify-between cursor-pointer border border-transparent hover:border-orange-200"
-                >
-                  <div className="min-w-0 flex-1 mr-3">
-                    <p className="font-bold text-xs text-gray-900 dark:text-white truncate">{t.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-white dark:bg-slate-800 border text-gray-600 dark:text-slate-300">
-                        {t.status}
-                      </span>
-                      {t.due_date && (
-                        <span className="text-[10px] text-gray-500 dark:text-slate-400">
-                          Due: {safeFormatDate(t.due_date, 'dd MMM')} {t.due_time || ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Stats Section with Filter */}
         <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
           <div className="flex justify-between items-center mb-4">

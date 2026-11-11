@@ -70,23 +70,24 @@ export default function LeaveManagementPage({ session }: { session: any }) {
         const todayStr = format(new Date(), 'yyyy-MM-dd');
 
         const DEFAULT_ANNUAL: Record<string, number> = { casual: 12, sick: 5, el_pl: 0, comp_off: 0 };
-        const ACCRUED_TYPES = ["el_pl", "comp_off"];
         const bmap: Record<string, { used: number; accrued: number; annual: number }> = {};
         
         ["casual", "sick", "el_pl", "comp_off", "half_day", "wfh", "lwp"].forEach((t) => {
           const bal = (balancesRes.data || []).find((b: any) => b.leave_type === t);
           const pol = (policiesRes.data || []).find((p: any) => p.leave_type === t);
-          const isAccrued = ACCRUED_TYPES.includes(t);
           
-          // Calculate used dynamically: approved, start_date <= today, and no clock-in on start_date
+          // Calculate used dynamically: approved leaves unless employee clocked in on start_date
           const dynamicUsed = leaves
-            .filter(l => l.leave_type === t && l.status === 'approved' && l.start_date <= todayStr && !attSet.has(l.start_date))
+            .filter(l => l.leave_type === t && l.status === 'approved' && !attSet.has(l.start_date))
             .reduce((sum, l) => sum + (Number(l.days) || 1), 0);
+
+          const baseAnnual = Number(pol?.annual_limit ?? DEFAULT_ANNUAL[t] ?? 0);
+          const accrued = Number(bal?.accrued ?? 0);
 
           bmap[t] = {
             used: dynamicUsed,
-            accrued: bal?.accrued ?? 0,
-            annual: isAccrued ? (bal?.accrued ?? 0) : (pol?.annual_limit ?? DEFAULT_ANNUAL[t] ?? 0),
+            accrued,
+            annual: Math.max(0, baseAnnual + accrued),
           };
         });
         setLeaveBalances(bmap);

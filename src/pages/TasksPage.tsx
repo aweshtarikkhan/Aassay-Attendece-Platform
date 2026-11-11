@@ -10,6 +10,7 @@ import {
   CheckSquare, Calendar, Clock, AlertCircle, CheckCircle2,
   Filter, Search, RefreshCw, Flag, ArrowRight, PlayCircle,
   PauseCircle, Check, MessageSquare, User, Sparkles, Users,
+  History,
   Video,
   Link2,
   ExternalLink
@@ -38,6 +39,7 @@ export interface EmployeeTask {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  activity_history?: Array<{ at: string; actor: string; role: string; action: string; details?: string }> | null;
 }
 
 export interface TaskStatus {
@@ -79,6 +81,51 @@ export default function TasksPage({ session }: { session: any }) {
   const [noteTask, setNoteTask] = useState<EmployeeTask | null>(null);
   const [noteText, setNoteText] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<EmployeeTask | null>(null);
+
+  const getTaskTimeline = (task: EmployeeTask) => {
+    if (Array.isArray(task.activity_history) && task.activity_history.length > 0) {
+      return task.activity_history;
+    }
+    const items: Array<{ at: string; actor: string; role: string; action: string; details?: string }> = [];
+    if (task.created_at) {
+      items.push({
+        at: task.created_at,
+        actor: task.assigned_by_name || 'Business HR',
+        role: 'hr',
+        action: 'Task Assigned',
+        details: `Priority: ${task.priority || 'Medium'} • Initial Status: ${task.status || 'Pending'}`,
+      });
+    }
+    if (task.updated_at && task.updated_at !== task.created_at) {
+      items.push({
+        at: task.updated_at,
+        actor: 'Team / HR',
+        role: 'system',
+        action: 'Task Updated',
+        details: `Current Status: ${task.status}`,
+      });
+    }
+    if (task.notes) {
+      items.push({
+        at: task.updated_at || task.created_at,
+        actor: employee?.name || 'Employee',
+        role: 'employee',
+        action: 'Work Note Saved',
+        details: task.notes,
+      });
+    }
+    if (task.completed_at) {
+      items.push({
+        at: task.completed_at,
+        actor: employee?.name || 'Employee',
+        role: 'employee',
+        action: 'Task Completed',
+        details: `Marked ${task.status}`,
+      });
+    }
+    return items;
+  };
 
   const { toast } = useToast();
 
@@ -169,15 +216,31 @@ export default function TasksPage({ session }: { session: any }) {
       const matchedStatus = statuses.find((s) => s.name.toLowerCase() === newStatusName.toLowerCase());
       const isCompleted = matchedStatus?.is_completed || newStatusName.toLowerCase() === 'done' || newStatusName.toLowerCase() === 'completed';
 
+      const nowIso = new Date().toISOString();
+      const nextHistory = [
+        ...getTaskTimeline(task),
+        {
+          at: nowIso,
+          actor: employee?.name || 'Employee',
+          role: 'employee',
+          action: 'Status Updated',
+          details: `${task.status} → ${newStatusName}`,
+        },
+      ];
       const updatePayload: any = {
         status: newStatusName,
         status_id: matchedStatus?.id || null,
-        completed_at: isCompleted ? new Date().toISOString() : null,
+        completed_at: isCompleted ? nowIso : null,
+        updated_at: nowIso,
+        activity_history: nextHistory,
       };
 
       // Optimistic state update
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, ...updatePayload } : t))
+      );
+      setSelectedTask((prev) =>
+        prev && prev.id === task.id ? { ...prev, ...updatePayload } : prev
       );
 
       const { error } = await supabase
@@ -211,15 +274,33 @@ export default function TasksPage({ session }: { session: any }) {
     if (!noteTask) return;
     setSavingNote(true);
     try {
+      const nowIso = new Date().toISOString();
+      const trimmedNote = noteText.trim() || null;
+      const nextHistory = [
+        ...getTaskTimeline(noteTask),
+        {
+          at: nowIso,
+          actor: employee?.name || 'Employee',
+          role: 'employee',
+          action: 'Work Note Updated',
+          details: trimmedNote || 'Cleared work note',
+        },
+      ];
       const { error } = await supabase
         .from('employee_tasks')
-        .update({ notes: noteText.trim() || null })
+        .update({ notes: trimmedNote, updated_at: nowIso, activity_history: nextHistory })
         .eq('id', noteTask.id);
-
       if (error) throw error;
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === noteTask.id ? { ...t, notes: noteText.trim() || null } : t))
+        prev.map((t) =>
+          t.id === noteTask.id ? { ...t, notes: trimmedNote, updated_at: nowIso, activity_history: nextHistory } : t
+        )
+      );
+      setSelectedTask((prev) =>
+        prev && prev.id === noteTask.id
+          ? { ...prev, notes: trimmedNote, updated_at: nowIso, activity_history: nextHistory }
+          : prev
       );
 
       toast({ title: 'Note Saved', description: 'Your task update has been saved.' });
@@ -340,8 +421,8 @@ export default function TasksPage({ session }: { session: any }) {
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
           {[
             { id: 'all', label: `All (${counts.total})` },
             { id: 'pending', label: `Pending (${counts.pending})` },
@@ -352,10 +433,10 @@ export default function TasksPage({ session }: { session: any }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                 activeTab === tab.id
-                  ? 'bg-orange-500 text-white shadow-xs scale-102'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/70 dark:border-slate-700/70'
               }`}
             >
               {tab.label}
@@ -409,7 +490,9 @@ export default function TasksPage({ session }: { session: any }) {
             return (
               <Card
                 key={task.id}
-                className={`p-4 sm:p-5 bg-white dark:bg-slate-800 border rounded-2xl transition-all shadow-xs hover:shadow-md ${
+                onClick={() => setSelectedTask(task)}
+                title="Click to view task details & activity history"
+                className={`p-4 sm:p-5 bg-white dark:bg-slate-800 border rounded-2xl transition-all shadow-xs hover:shadow-md cursor-pointer ${
                   isCompleted
                     ? 'border-emerald-200/90 bg-emerald-50/15'
                     : isOverdue
@@ -451,6 +534,7 @@ export default function TasksPage({ session }: { session: any }) {
                       {task.meeting_link && (
                         <a
                           href={task.meeting_link}
+                          onClick={(e) => e.stopPropagation()}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm active:scale-95 transition-all"
@@ -465,6 +549,7 @@ export default function TasksPage({ session }: { session: any }) {
                       {task.due_date && (
                         <a
                           href={getGoogleCalendarUrl(task)}
+                          onClick={(e) => e.stopPropagation()}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
@@ -545,7 +630,7 @@ export default function TasksPage({ session }: { session: any }) {
                                 key={s.id}
                                 type="button"
                                 disabled={updatingTaskId === task.id}
-                                onClick={() => handleUpdateStatus(task, s.name)}
+                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(task, s.name); }}
                                 className={`py-1.5 px-3 text-xs rounded-xl font-semibold transition-all border ${
                                   isCurrent
                                     ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
@@ -564,7 +649,7 @@ export default function TasksPage({ session }: { session: any }) {
                                 key={st}
                                 type="button"
                                 disabled={updatingTaskId === task.id}
-                                onClick={() => handleUpdateStatus(task, st)}
+                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(task, st); }}
                                 className={`py-1.5 px-3 text-xs rounded-xl font-semibold transition-all border ${
                                   isCurrent
                                     ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
@@ -583,7 +668,8 @@ export default function TasksPage({ session }: { session: any }) {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setNoteTask(task);
                         setNoteText(task.notes || '');
                       }}
@@ -599,6 +685,164 @@ export default function TasksPage({ session }: { session: any }) {
           })}
         </div>
       )}
+
+      {/* Task Detail & Activity History Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null); }}>
+        <DialogContent className="max-w-xl max-h-[88vh] overflow-y-auto bg-white border-slate-200 text-slate-900 shadow-2xl p-6 rounded-3xl">
+          {selectedTask && (() => {
+            const timeline = getTaskTimeline(selectedTask);
+            const isCompleted = selectedTask.status.toLowerCase() === 'done' || selectedTask.status.toLowerCase() === 'completed';
+            return (
+              <>
+                <DialogHeader className="border-b border-slate-100 pb-3">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${PRIORITY_BADGES[selectedTask.priority] || PRIORITY_BADGES.Medium}`}>
+                      {selectedTask.priority} Priority
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      {selectedTask.status}
+                    </span>
+                  </div>
+                  <DialogTitle className={`text-lg font-bold text-slate-900 ${isCompleted ? 'line-through text-slate-400' : ''}`}>
+                    {selectedTask.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500">
+                    Assigned by {selectedTask.assigned_by_name || 'Business HR'}
+                    {selectedTask.due_date ? ` • Due: ${format(parseISO(selectedTask.due_date), 'dd MMM yyyy')}${selectedTask.due_time ? ` at ${selectedTask.due_time}` : ''}` : ''}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-3">
+                  {selectedTask.description && (
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {selectedTask.description}
+                    </div>
+                  )}
+
+                  {selectedTask.assigned_employee_names && selectedTask.assigned_employee_names.length > 0 && (
+                    <div className="text-xs">
+                      <span className="font-semibold text-slate-600 block mb-1.5">Assigned Team Members:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTask.assigned_employee_names.map((memberName: string, idx: number) => (
+                          <span key={idx} className="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium text-[11px]">
+                            {memberName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(selectedTask.meeting_link || selectedTask.due_date) && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTask.meeting_link && (
+                        <a
+                          href={selectedTask.meeting_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700"
+                        >
+                          <Video className="w-3.5 h-3.5" /> Join Meeting <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      <a
+                        href={getGoogleCalendarUrl(selectedTask)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold hover:bg-blue-100"
+                      >
+                        <Calendar className="w-3.5 h-3.5" /> Add to Google Calendar
+                      </a>
+                    </div>
+                  )}
+
+                  {selectedTask.notes && (
+                    <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950">
+                      <span className="font-bold block mb-0.5">Your Latest Work Note:</span>
+                      {selectedTask.notes}
+                    </div>
+                  )}
+
+                  {/* Quick Status Change */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Update Status</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(statuses.length > 0 ? statuses.map((s) => s.name) : ['Pending', 'Working on it', 'On Hold', 'Done']).map((stName) => {
+                        const active = selectedTask.status.toLowerCase() === stName.toLowerCase();
+                        return (
+                          <button
+                            key={stName}
+                            type="button"
+                            disabled={updatingTaskId === selectedTask.id}
+                            onClick={() => handleUpdateStatus(selectedTask, stName)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                              active
+                                ? 'bg-slate-900 text-white border-slate-900'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            {stName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Task Activity History Timeline */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600">
+                      <History className="w-3.5 h-3.5 text-orange-600" />
+                      Task Activity History ({timeline.length})
+                    </div>
+                    {timeline.length === 0 ? (
+                      <p className="text-xs text-slate-400">No activity recorded yet.</p>
+                    ) : (
+                      <div className="space-y-2.5 border-l-2 border-slate-200 pl-3 ml-1">
+                        {timeline.map((ev, idx) => (
+                          <div key={idx} className="relative text-xs">
+                            <span className="absolute -left-[17px] top-1 h-2.5 w-2.5 rounded-full bg-orange-500 ring-2 ring-white" />
+                            <div className="flex flex-wrap items-center justify-between gap-1">
+                              <span className="font-semibold text-slate-800">{ev.action}</span>
+                              <span className="text-[11px] text-slate-400">
+                                {ev.at ? format(parseISO(ev.at), 'dd MMM yyyy, hh:mm a') : ''}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              By {ev.actor}{ev.details ? ` — ${ev.details}` : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <DialogFooter className="border-t border-slate-100 pt-3 flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setNoteText(selectedTask.notes || '');
+                      setNoteTask(selectedTask);
+                    }}
+                    className="gap-1.5 text-xs"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    {selectedTask.notes ? 'Edit Work Note' : 'Add Work Note'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelectedTask(null)}
+                    className="text-xs"
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Note Update Dialog */}
       <Dialog open={!!noteTask} onOpenChange={(open) => { if (!open) setNoteTask(null); }}>

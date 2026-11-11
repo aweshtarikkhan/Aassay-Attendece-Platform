@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import {  LayoutDashboard, History, CalendarDays, Umbrella, HelpCircle, Bell, LogOut, MessageCircle, Moon, Sun, X, CheckCircle2, Menu, ChevronRight, Fingerprint, Settings, Home, FileCheck, CheckSquare, Receipt, LayoutGrid } from 'lucide-react';
+import {  LayoutDashboard, History, CalendarDays, Umbrella, HelpCircle, Bell, LogOut, Moon, Sun, X, CheckCircle2, Menu, ChevronRight, ArrowLeft, Fingerprint, Settings, Home, FileCheck, CheckSquare, Receipt, LayoutGrid } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +37,6 @@ export default function DashboardLayout() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [unreadChats, setUnreadChats] = useState(0);
   const [unreadLeaves, setUnreadLeaves] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
   const navigate = useNavigate();
@@ -144,55 +143,6 @@ export default function DashboardLayout() {
       } catch (tErr) {
         console.error("Error fetching tasks count:", tErr);
       }
-
-          // Check for unread chat messages
-            try {
-              const { data: myGroups } = await supabase
-                .from('chat_group_members')
-                .select('group_id')
-                .eq('employee_id', empData.id);
-              
-              const groupIds = myGroups?.map((g: any) => g.group_id) || [];
-              const groupFilter = groupIds.length > 0 ? `,group_id.in.(${groupIds.join(',')})` : '';
-
-              let query = supabase
-                .from('chat_messages')
-                .select('*, sender:employees!sender_id(name)')
-                .eq('status', 'sent')
-                .neq('sender_id', empData.id);
-                
-              if (groupIds.length > 0) {
-                query = query.or(`receiver_id.eq.${empData.id},group_id.in.(${groupIds.join(',')})`);
-              } else {
-                query = query.eq('receiver_id', empData.id);
-              }
-
-              const { data: unreadMsgs, error: unreadErr } = await query;
-                
-              console.log("Unread messages fetch result:", { unreadMsgs, unreadErr, empId: empData.id, groupIds });
-                
-              if (unreadMsgs && unreadMsgs.length > 0) {
-                 setUnreadChats(unreadMsgs.length);
-                 const chatNotifs = unreadMsgs.map(m => ({
-                    id: 'chat-' + m.id,
-                    title: 'New Message from ' + (m.sender?.name || 'Someone'),
-                    message: m.message || (m.file_url ? 'Sent an attachment' : 'Sent a message'),
-                    is_read: false,
-                    type: 'chat',
-                    created_at: m.created_at
-                 }));
-                 setNotifications(prev => {
-                    const combined = [...chatNotifs, ...prev];
-                    combined.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                    return combined.slice(0, 15);
-                 });
-              } else {
-                 setUnreadChats(0);
-              }
-            } catch (err) {
-              console.error("Error fetching unread:", err);
-              setUnreadChats(0);
-            }
     };
     checkUser();
   }, [navigate]);
@@ -337,90 +287,6 @@ export default function DashboardLayout() {
     if (!employee) return;
 
     // Real-time listener for new chat messages
-    const chatChannel = supabase
-      .channel('dashboard-chat-msgs')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'chat_messages' },
-          (payload) => {
-            // If it's a DM to us, and it became read
-            if (payload.new.receiver_id === employee.id && payload.new.status === 'read') {
-              setNotifications(prev => prev.filter(n => n.id !== 'chat-' + payload.new.id));
-              setUnreadChats(prev => Math.max(0, prev - 1));
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        async (payload) => {
-          const newMsg = payload.new;
-          
-          if (newMsg.sender_id === employee.id) return; // Ignore own messages
-          
-          let isRelevant = false;
-          let notifTitle = '';
-
-          if (newMsg.receiver_id === employee.id) {
-            isRelevant = true;
-          } else if (newMsg.group_id) {
-            // Check if user is in this group
-            const { data: member } = await supabase
-              .from('chat_group_members')
-              .select('id')
-              .eq('group_id', newMsg.group_id)
-              .eq('employee_id', employee.id)
-              .maybeSingle();
-              
-            if (member) {
-              isRelevant = true;
-            }
-          }
-
-          if (!isRelevant) return;
-
-          // Fetch sender name
-          const { data: senderData } = await supabase
-            .from('employees')
-            .select('name')
-            .eq('id', newMsg.sender_id)
-            .single();
-            
-          const senderName = senderData?.name || 'Someone';
-
-          if (newMsg.group_id) {
-            const { data: groupData } = await supabase.from('chat_groups').select('name').eq('id', newMsg.group_id).maybeSingle();
-            notifTitle = `Message from ${senderName} in ${groupData?.name || 'Group'}`;
-          } else {
-            notifTitle = `New Message from ${senderName}`;
-          }
-          
-          // Audio chime
-          playNotificationSound();
-
-          // Pop a toast notification
-          toast({
-            title: notifTitle,
-            description: newMsg.message || 'Sent an attachment',
-            duration: 5000,
-          });
-          
-          // Add to notifications list
-          setNotifications(prev => {
-            const newNotif = {
-              id: 'chat-' + newMsg.id,
-              title: notifTitle,
-              message: newMsg.message || 'Sent an attachment',
-              is_read: false,
-              type: 'chat',
-              created_at: newMsg.created_at
-            };
-            return [newNotif, ...prev].slice(0, 15);
-          });
-          setUnreadChats(prev => prev + 1);
-        }
-      )
-      .subscribe();
 
     // Real-time listener for notifications table (for group chat notifications)
     const notifChannel = supabase
@@ -430,7 +296,6 @@ export default function DashboardLayout() {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${employee.auth_user_id}` },
         (payload) => {
           const notif = payload.new as any;
-          // Only add if not already present (chat notifications are added via chatChannel too)
           if (notif.type !== 'chat') {
             setNotifications(prev => {
               if (prev.find(n => n.id === notif.id)) return prev;
@@ -446,7 +311,6 @@ export default function DashboardLayout() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(chatChannel);
       supabase.removeChannel(notifChannel);
     };
   }, [employee]);
@@ -464,27 +328,24 @@ export default function DashboardLayout() {
     }
   }, [location.pathname, employee]);
 
-  // Auto-clear chat notifications when visiting /chat
+  // Listen for custom 'open-mobile-menu' event (mobile only) and close if resized to desktop
   useEffect(() => {
-    // Only auto-clear when the user specifically opens a conversation, which fires the 'chat-read' event.
-    // We removed the aggressive location-based clearing here to keep the red dot on the Chat menu item.
-  }, [location.pathname, employee]);
-
-  // Listen for custom 'chat-read' event to instantly clear badges
-  useEffect(() => {
-    const handleChatRead = () => {
-      setUnreadChats(0);
-      setNotifications(prev => prev.filter(n => n.type !== 'chat'));
+    const handleOpenMenu = () => {
+      if (window.innerWidth < 768) {
+        setMobileMenuOpen(true);
+      }
     };
-    window.addEventListener('chat-read', handleChatRead);
-    return () => window.removeEventListener('chat-read', handleChatRead);
-  }, []);
-
-  // Listen for custom 'open-mobile-menu' event
-  useEffect(() => {
-    const handleOpenMenu = () => setMobileMenuOpen(true);
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
     window.addEventListener('open-mobile-menu', handleOpenMenu);
-    return () => window.removeEventListener('open-mobile-menu', handleOpenMenu);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('open-mobile-menu', handleOpenMenu);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Listen for 'tasks_updated' event to refresh pending task count
@@ -519,61 +380,6 @@ export default function DashboardLayout() {
     return () => window.removeEventListener('tasks_updated', refreshTasksCount);
   }, [employee]);
 
-  // Fast polling check for unread messages (every 4 seconds)
-  useEffect(() => {
-    if (!employee) return;
-    const pollUnread = async () => {
-
-      try {
-        const { data: myGroups } = await supabase
-          .from('chat_group_members')
-          .select('group_id')
-          .eq('employee_id', employee.id);
-        
-        const groupIds = myGroups?.map((g: any) => g.group_id) || [];
-
-        let query = supabase
-          .from('chat_messages')
-          .select('id, sender_id, message, created_at, sender:employees!sender_id(name), group_id')
-          .eq('status', 'sent')
-          .neq('sender_id', employee.id);
-
-        if (groupIds.length > 0) {
-          query = query.or(`receiver_id.eq.${employee.id},group_id.in.(${groupIds.join(',')})`);
-        } else {
-          query = query.eq('receiver_id', employee.id);
-        }
-
-        const { data: unreadMsgs } = await query;
-
-        if (unreadMsgs && unreadMsgs.length > 0) {
-          setUnreadChats(unreadMsgs.length);
-          const chatNotifs = unreadMsgs.map((m: any) => ({
-            id: 'chat-' + m.id,
-            title: 'New Message from ' + (m.sender?.name || 'Someone'),
-            message: m.message || 'Sent a message',
-            is_read: false,
-            type: 'chat',
-            created_at: m.created_at
-          }));
-          setNotifications(prev => {
-            const nonChat = prev.filter(n => n.type !== 'chat');
-            const combined = [...chatNotifs, ...nonChat];
-            combined.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-            return combined.slice(0, 15);
-          });
-        } else {
-          setUnreadChats(0);
-          setNotifications(prev => prev.filter(n => n.type !== 'chat'));
-        }
-      } catch (err) {
-        console.error("Error polling unread:", err);
-      }
-    };
-    const timer = setInterval(pollUnread, 4000);
-    return () => clearInterval(timer);
-  }, [employee, location.pathname]);
-
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const markAllAsRead = async () => {
@@ -582,14 +388,8 @@ export default function DashboardLayout() {
       .from('notifications')
       .update({ is_read: true }).eq('user_id', employee.auth_user_id)
       .eq('is_read', false);
-    await supabase
-      .from('chat_messages')
-      .update({ status: 'read' })
-      .eq('receiver_id', employee.id)
-      .eq('status', 'sent');
     setNotifications(notifications.map(n => ({ ...n, is_read: true })));
     setUnreadLeaves(0);
-    setUnreadChats(0);
   };
 
   const navItems = [
@@ -597,8 +397,7 @@ export default function DashboardLayout() {
     { name: 'Leaves', icon: Umbrella, path: '/leaves', isMenu: false },
     { name: 'Home', icon: Home, path: '/dashboard', isMenu: false },
     { name: 'Tasks', icon: CheckSquare, path: '/tasks', isMenu: false },
-    { name: 'Expenses', icon: Receipt, path: '/expenses', isMenu: false },
-    { name: 'All Pages', icon: LayoutGrid, path: '#', isMenu: true },
+    { name: 'Manage', icon: LayoutGrid, path: '#', isMenu: true },
   ];
 
   const sidebarNavItems = [
@@ -608,16 +407,25 @@ export default function DashboardLayout() {
     { name: 'Leaves', icon: Umbrella, path: '/leaves' },
     { name: 'Expenses', icon: Receipt, path: '/expenses' },
     { name: 'Documents', icon: FileCheck, path: '/documents' },
-    { name: 'Chat', icon: MessageCircle, path: '/chat' },
     { name: 'Holidays', icon: CalendarDays, path: '/holidays' },
     { name: 'Settings', icon: Settings, path: '/settings' },
+  ];
+
+  const manageTileItems = [
+    { name: 'Home', subtitle: 'Punch & Overview', icon: Home, path: '/dashboard', iconBg: 'bg-orange-500 text-white' },
+    { name: 'Tasks', subtitle: pendingTasks > 0 ? `${pendingTasks} Pending` : 'Work & Goals', icon: CheckSquare, path: '/tasks', iconBg: 'bg-amber-500 text-white' },
+    { name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' },
+    { name: 'Leaves', subtitle: unreadLeaves > 0 ? `${unreadLeaves} New Update` : 'Apply & Balance', icon: Umbrella, path: '/leaves', iconBg: 'bg-blue-500 text-white' },
+    { name: 'History', subtitle: 'Punches & Logs', icon: History, path: '/history', iconBg: 'bg-indigo-500 text-white' },
+    { name: 'Documents', subtitle: 'Files & Letters', icon: FileCheck, path: '/documents', iconBg: 'bg-violet-500 text-white' },
+    { name: 'Holidays', subtitle: 'Holiday List', icon: CalendarDays, path: '/holidays', iconBg: 'bg-cyan-600 text-white' },
+    { name: 'Settings', subtitle: 'App Preferences', icon: Settings, path: '/settings', iconBg: 'bg-slate-700 text-white' },
   ];
 
   // Get dot indicator for nav items
   const getNavDot = (itemName: string) => {
     if (itemName === 'Tasks' && pendingTasks > 0) return true;
     if (itemName === 'Leaves' && unreadLeaves > 0) return true;
-    if (itemName === 'Chat' && unreadChats > 0) return true;
     return false;
   };
   
@@ -674,11 +482,6 @@ export default function DashboardLayout() {
                 </div>
                 <span>{item.name}</span>
               </div>
-              {hasDot && item.name === 'Chat' && unreadChats > 0 && (
-                <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm">
-                  {unreadChats}
-                </span>
-              )}
               {hasDot && item.name === 'Tasks' && pendingTasks > 0 && (
                 <span className="flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shadow-sm">
                   {pendingTasks}
@@ -701,12 +504,110 @@ export default function DashboardLayout() {
     </>
   );
 
+  const manageSheetContent = (
+    <div className="flex flex-col h-full bg-white text-slate-900">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-white shrink-0 pr-12">
+        <img src={logoImg} alt="AassayBiz" className="h-8 w-auto object-contain" />
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-50 text-orange-600 border border-orange-200">
+          Manage
+        </span>
+      </div>
+
+      {/* Employee Profile Tile */}
+      <div className="px-4 pt-4 pb-2 bg-white">
+        <NavLink
+          to="/profile"
+          onClick={() => setMobileMenuOpen(false)}
+          className="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 hover:border-orange-300 hover:bg-orange-50/40 transition-all flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-base shrink-0 overflow-hidden border border-orange-200">
+              {employee?.avatar_url || employee?.profile_image ? (
+                <img src={employee.avatar_url || employee.profile_image} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                employee?.name?.charAt(0) || 'E'
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-slate-900 truncate">{employee?.name || 'Employee'}</span>
+              <span className="text-xs text-slate-500 truncate">{employee?.designation || 'Staff'} • Profile</span>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+        </NavLink>
+      </div>
+
+      {/* White-Background Tiles Grid for All Pages */}
+      <div className="flex-1 px-4 py-3 overflow-y-auto bg-white">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 px-1">
+          Manage Pages
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {manageTileItems.map((item) => {
+            const hasDot = getNavDot(item.name);
+            return (
+              <NavLink
+                key={item.name}
+                to={item.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `relative flex flex-col items-center justify-center text-center gap-2 p-3.5 rounded-2xl border transition-all active:scale-95 ${
+                    isActive
+                      ? 'bg-orange-50/80 border-orange-400 shadow-sm ring-1 ring-orange-200'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                  }`
+                }
+              >
+                {hasDot && item.name === 'Tasks' && pendingTasks > 0 ? (
+                  <span className="absolute top-2.5 right-2.5 min-w-[20px] h-5 px-1.5 rounded-full bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {pendingTasks}
+                  </span>
+                ) : hasDot ? (
+                  <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                ) : null}
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-xs shrink-0 ${item.iconBg}`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 w-full">
+                  <div className="text-sm font-bold text-slate-900 leading-tight truncate">{item.name}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 truncate">{item.subtitle}</div>
+                </div>
+              </NavLink>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-4 py-3.5 border-t border-slate-200 bg-white flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(false)}
+          className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all active:scale-95"
+        >
+          <LogOut className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-[100dvh] w-full bg-gray-50 dark:bg-slate-900 overflow-hidden transition-colors">
-      {/* Mobile Drawer Sheet */}
+      {/* Mobile-Only Full-Page Bottom Pop-Up Manage Sheet (White Background Tiles) */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-72 bg-[#0a192f] border-r border-white/10 text-white flex flex-col z-[100000]">
-          {sidebarContent}
+        <SheetContent
+          side="bottom"
+          className="md:hidden p-0 inset-0 w-full max-w-full h-[100dvh] bg-white border-0 text-slate-900 flex flex-col z-[100000] data-[state=open]:duration-300 data-[state=closed]:duration-200"
+        >
+          {manageSheetContent}
         </SheetContent>
       </Sheet>
 
@@ -798,11 +699,9 @@ export default function DashboardLayout() {
                         <button 
                           onClick={async () => {
                             setNotifications([]);
-                            setUnreadChats(0);
                             setUnreadLeaves(0);
                             if (employee) {
                               await supabase.from('notifications').update({ is_read: true }).eq('user_id', employee.auth_user_id);
-                              await supabase.from('chat_messages').update({ status: 'read' }).eq('receiver_id', employee.id).eq('status', 'sent');
                             }
                           }} 
                           className="text-xs text-orange-600 dark:text-orange-400 hover:underline mr-2"
@@ -828,22 +727,9 @@ export default function DashboardLayout() {
                           onClick={async () => {
                             setShowNotifications(false);
                             setNotifications(prev => prev.filter(item => item.id !== n.id));
-                            if (n.type === 'chat') {
-                              setUnreadChats(0);
-                              if (String(n.id).startsWith('chat-')) {
-                                const rawMsgId = String(n.id).replace('chat-', '');
-                                await supabase.from('chat_messages').update({ status: 'read' }).eq('id', rawMsgId);
-                              } else {
-                                await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
-                              }
-                              navigate('/chat');
-                            } else {
-                              if (!String(n.id).startsWith('chat-')) {
-                                await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
-                              }
-                              if (n.type?.startsWith('leave')) {
-                                navigate('/leaves');
-                              }
+                            await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
+                            if (n.type?.startsWith('leave')) {
+                              navigate('/leaves');
                             }
                           }}
                           className={`p-4 relative group transition-colors cursor-pointer hover:bg-orange-50/70 dark:hover:bg-slate-700/50 ${!n.is_read ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''}`}
@@ -856,19 +742,7 @@ export default function DashboardLayout() {
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 setNotifications(prev => prev.filter(item => item.id !== n.id));
-                                if (n.type === 'chat') {
-                                  setUnreadChats(prev => Math.max(0, prev - 1));
-                                  if (String(n.id).startsWith('chat-')) {
-                                    const rawMsgId = String(n.id).replace('chat-', '');
-                                    await supabase.from('chat_messages').update({ status: 'read' }).eq('id', rawMsgId);
-                                  } else {
-                                    await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
-                                  }
-                                } else {
-                                  if (!String(n.id).startsWith('chat-')) {
-                                    await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
-                                  }
-                                }
+                                await supabase.from('notifications').update({ is_read: true }).eq('id', n.id);
                               }}
                               className="absolute right-4 top-4 p-1 text-gray-400 hover:text-red-500 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                               title="Clear notification"
@@ -886,12 +760,7 @@ export default function DashboardLayout() {
         )}
 
         {/* Page Content */}
-        {location.pathname === '/chat' ? (
-          <div className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-slate-900 transition-colors relative flex flex-col pb-[70px] md:pb-0">
-            <Outlet />
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-slate-900 transition-colors relative pb-28 md:pb-8 pt-4 md:pt-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-slate-900 transition-colors relative pb-28 md:pb-8 pt-4 md:pt-0" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="min-h-full flex flex-col">
               <div className="flex-1">
                 <Outlet />
@@ -902,10 +771,10 @@ export default function DashboardLayout() {
               </div>
             </div>
           </div>
-        )}
+        
 
         {/* Mobile Bottom Navigation - AassayBiz Modern Bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 grid grid-cols-6 items-center px-1 z-[9999] shadow-[0_-6px_25px_rgba(0,0,0,0.08)] h-16 pb-1">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 grid grid-cols-5 items-center px-1 z-[9999] shadow-[0_-6px_25px_rgba(0,0,0,0.08)] h-16 pb-1">
           {navItems.map((item, index) => {
             const isCenter = index === 2; // Home button at index 2
             const hasDot = getNavDot(item.name);
@@ -945,7 +814,7 @@ export default function DashboardLayout() {
             }
 
             if (item.isMenu) {
-              const isOtherPageActive = ['/chat', '/documents', '/holidays', '/settings', '/profile'].some(p => location.pathname.startsWith(p));
+              const isOtherPageActive = ['/expenses', '/documents', '/holidays', '/settings', '/profile'].some(p => location.pathname.startsWith(p));
               return (
                 <div key={item.name} className="flex justify-center items-center w-full">
                   <button
@@ -959,7 +828,7 @@ export default function DashboardLayout() {
                   >
                     <div className="relative flex items-center justify-center w-6 h-6">
                       <item.icon className="w-5 h-5" />
-                      {(unreadChats > 0 || unreadLeaves > 0) && (
+                      {unreadLeaves > 0 && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />
                       )}
                     </div>
