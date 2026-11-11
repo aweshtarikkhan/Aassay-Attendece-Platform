@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { safeFormatDate, safeFormatTime } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { Send, UserCircle2, Users, MessageSquare, Plus, Check, CheckCheck, UserPlus, X, ShieldAlert, Search, ChevronLeft, Phone, Video, Info, MessageCircle, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -1069,7 +1070,7 @@ const [showMentions, setShowMentions] = React.useState(false);
                       const isMine = msg.sender_id === employee.id;
                       const showSender = selectedType === 'group' && !isMine && (idx === 0 || messages[idx-1].sender_id !== msg.sender_id);
                       const msgDate = new Date(msg.created_at);
-                      const dateKey = safeFormatDate(m.created_at, 'yyyy-MM-dd');
+                      const dateKey = safeFormatDate(msg.created_at, 'yyyy-MM-dd');
                       const showDateSeparator = dateKey !== lastDateKey;
                       if (showDateSeparator) lastDateKey = dateKey;
 
@@ -1077,7 +1078,7 @@ const [showMentions, setShowMentions] = React.useState(false);
                         ? 'Today'
                         : isYesterday(msgDate)
                         ? 'Yesterday'
-                        : safeFormatDate(m.created_at, 'MMMM d, yyyy');
+                        : safeFormatDate(msg.created_at, 'MMMM d, yyyy');
 
                       return (
                         <React.Fragment key={msg.id}>
@@ -1106,7 +1107,7 @@ const [showMentions, setShowMentions] = React.useState(false);
                               {/* Read Receipts */}
                               <div className={`flex items-center gap-1 self-end mt-1.5 ${isMine ? 'text-orange-100' : 'text-gray-400 dark:text-slate-500'}`}>
                                 <span className="text-[9px] font-bold">
-                                  {safeFormatTime(m.created_at, '', 'HH:mm')}
+                                  {safeFormatTime(msg.created_at, 'HH:mm', '')}
                                 </span>
                                 {isMine && (
                                   <>

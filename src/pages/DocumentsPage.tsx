@@ -12,6 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { FileText, Eye, ExternalLink, Download, Upload, Loader2, FileCheck, Plus, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { resolveCurrentEmployee, getCachedEmployee } from '@/lib/employee-utils';
+import { safeFormatDate } from '@/lib/utils';
 
 const DOC_TYPES = ["Aadhaar", "PAN", "Offer Letter", "Appointment Letter", "Salary Slip", "Bank Proof", "Resume", "Other"];
 
