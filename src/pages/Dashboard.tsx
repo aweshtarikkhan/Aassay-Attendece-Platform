@@ -932,7 +932,7 @@ export default function Dashboard({ session }: { session: any }) {
           </div>
 
           {/* Primary 4 Hero Feature Cards (2x2 on mobile, 4 columns on desktop) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
             {/* 1. Tasks */}
             <button
               type="button"
@@ -1006,69 +1006,6 @@ export default function Dashboard({ session }: { session: any }) {
                   Punches & Logs
                 </p>
               </div>
-            </button>
-          </div>
-
-          {/* Secondary Quick Action Shortcuts (Chat, Documents, Holidays, Settings, All Pages) */}
-          <div className="grid grid-cols-5 gap-2 pt-1 border-t border-gray-100 dark:border-slate-700/60">
-            {/* Chat */}
-            <button
-              type="button"
-              onClick={() => navigate('/chat')}
-              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <MessageCircle className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Chat</span>
-            </button>
-
-            {/* Documents */}
-            <button
-              type="button"
-              onClick={() => navigate('/documents')}
-              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <FileCheck className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Docs</span>
-            </button>
-
-            {/* Holidays */}
-            <button
-              type="button"
-              onClick={() => navigate('/holidays')}
-              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <CalendarDays className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Holidays</span>
-            </button>
-
-            {/* Settings */}
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all active:scale-95 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Settings className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-gray-700 dark:text-slate-300 mt-1">Settings</span>
-            </button>
-
-            {/* All Pages Trigger */}
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
-              className="flex flex-col items-center justify-center p-2 rounded-xl bg-orange-50/60 dark:bg-orange-950/20 hover:bg-orange-100/60 transition-all active:scale-95 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-orange-500 text-white flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-                <LayoutGrid className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1">All Pages</span>
             </button>
           </div>
         </div>
