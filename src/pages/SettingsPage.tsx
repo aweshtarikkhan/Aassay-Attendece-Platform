@@ -21,7 +21,6 @@ export default function SettingsPage({ session }: { session: any }) {
   const settingsOptions = [
     { name: 'Profile Settings', icon: User, path: '/profile', description: 'Update your personal details' },
     { name: 'My Documents', icon: FileText, path: '/documents', description: 'View & download employee documents' },
-    { name: 'Attendance History', icon: History, path: '/history', description: 'View punches, logs & regularizations' },
     { name: 'Holiday List', icon: CalendarDays, path: '/holidays', description: 'View company holidays' },
   ];
 
