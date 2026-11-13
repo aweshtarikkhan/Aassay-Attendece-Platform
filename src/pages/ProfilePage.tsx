@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, User, Phone, MapPin, Calendar, ShieldCheck, Key, Camera, Loader2, ArrowLeft } from 'lucide-react';
-import { resolveCurrentEmployee } from '@/lib/employee-utils';
+import { resolveCurrentEmployee, saveEmployeeCache } from '@/lib/employee-utils';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -53,9 +53,13 @@ export default function ProfilePage() {
 
         if (empData) {
           setEmployee(empData);
-          setPhone(empData.phone_number || empData.phone || '');
+          setPhone(empData.phone || empData.phone_number || '');
           setAddress(empData.address || '');
-          setDob(empData.date_of_birth || empData.dob || '');
+          let rawDob = empData.dob || empData.date_of_birth || '';
+          if (rawDob && typeof rawDob === 'string' && rawDob.includes('T')) {
+            rawDob = rawDob.split('T')[0];
+          }
+          setDob(rawDob);
           setAvatar(empData.avatar_url || empData.profile_image || '');
         }
       }
@@ -145,42 +149,70 @@ export default function ProfilePage() {
   const handleUpdateProfile = async () => {
     if (!employee?.id) return;
     
-    // Phone validation (10 digits)
+    // Phone validation (10 digits if provided)
     const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone && cleanPhone.length !== 10) {
+    if (phone && cleanPhone.length !== 10) {
       toast({ title: 'Invalid Phone Number', description: 'Please enter a valid 10-digit phone number.', variant: 'destructive' });
       return;
     }
     
     setLoadingProfile(true);
     try {
-      // First check if columns exist by trying to update them.
-      // If it fails, fallback to metadata or skip. 
-      // For AassayBiz schema, we assume phone and address might exist.
-      // To be safe against unknown schema, we use a try-catch for the update.
-      const payload: any = {};
-      if (phone) payload.phone = phone; // try phone first
-      if (address) payload.address = address;
-      
-      const { error } = await supabase
-        .from('employees')
-        .update(payload)
-        .eq('id', employee.id);
+      const cleanDob = dob && dob.trim() ? dob.trim() : null;
+      const cleanAddress = address && address.trim() ? address.trim() : null;
+      const cleanPhoneVal = cleanPhone || null;
+
+      let savedEmployee: any = null;
+
+      // 1. Primary: Use dedicated SECURITY DEFINER RPC
+      const { data: rpcRes, error: rpcErr } = await (supabase as any).rpc('update_employee_profile', {
+        p_employee_id: employee.id,
+        p_phone: cleanPhoneVal,
+        p_address: cleanAddress,
+        p_dob: cleanDob,
+      });
+
+      if (!rpcErr && rpcRes?.success && rpcRes?.employee) {
+        savedEmployee = rpcRes.employee;
+      } else {
+        if (rpcErr) console.warn("RPC update_employee_profile failed, falling back to direct update:", rpcErr);
         
-      if (error) {
-        // If 'phone' column doesn't exist, try 'phone_number'
-        console.warn("Update failed, trying alternative column names...", error);
-        const altPayload: any = {};
-        if (phone) altPayload.phone_number = phone;
-        if (address) altPayload.address = address;
-        if (Object.keys(altPayload).length > 0) {
-           await supabase.from('employees').update(altPayload).eq('id', employee.id);
-        }
+        // 2. Fallback: Direct UPDATE on employees table
+        const payload: any = {
+          phone: cleanPhoneVal,
+          address: cleanAddress,
+          dob: cleanDob,
+          date_of_birth: cleanDob,
+        };
+        const { data: updateData, error: updateErr } = await supabase
+          .from('employees')
+          .update(payload)
+          .eq('id', employee.id)
+          .select()
+          .maybeSingle();
+
+        if (updateErr) throw updateErr;
+        savedEmployee = updateData;
       }
-      
+
+      // Merge and update local state and cache
+      const mergedEmp = {
+        ...employee,
+        ...(savedEmployee || {}),
+        phone: cleanPhoneVal || '',
+        address: cleanAddress || '',
+        dob: cleanDob || '',
+        date_of_birth: cleanDob || '',
+      };
+
+      setEmployee(mergedEmp);
+      saveEmployeeCache(mergedEmp);
+      window.dispatchEvent(new CustomEvent('employee-profile-updated', { detail: mergedEmp }));
+
       toast({ title: 'Profile details saved successfully!' });
     } catch (error: any) {
-      toast({ title: 'Profile updated partially.', description: 'Some fields might not be supported by your organization yet.' });
+      console.error("Profile update failed:", error);
+      toast({ title: 'Error saving profile', description: error?.message || 'Could not save profile details to database.', variant: 'destructive' });
     } finally {
       setLoadingProfile(false);
     }
@@ -240,23 +272,56 @@ export default function ProfilePage() {
         setAvatar(compressedBase64);
 
         try {
-          const { error } = await supabase
-            .from('employees')
-            .update({ avatar_url: compressedBase64 })
-            .eq('id', employee.id);
-          
-          if (error) {
-            // fallback if avatar_url doesn't exist
-            const { error: err2 } = await supabase
+          let savedEmployee: any = null;
+
+          // 1. Primary: Use dedicated SECURITY DEFINER RPC
+          const { data: rpcRes, error: rpcErr } = await (supabase as any).rpc('update_employee_profile', {
+            p_employee_id: employee.id,
+            p_avatar_url: compressedBase64,
+          });
+
+          if (!rpcErr && rpcRes?.success && rpcRes?.employee) {
+            savedEmployee = rpcRes.employee;
+          } else {
+            if (rpcErr) console.warn("RPC update_employee_profile failed, falling back to direct update:", rpcErr);
+
+            // 2. Fallback: Direct UPDATE on employees table
+            const { data: updateData, error: updateErr } = await supabase
               .from('employees')
-              .update({ profile_image: compressedBase64 })
-              .eq('id', employee.id);
+              .update({ avatar_url: compressedBase64 })
+              .eq('id', employee.id)
+              .select()
+              .maybeSingle();
+
+            if (updateErr) {
+              const { data: altData, error: err2 } = await supabase
+                .from('employees')
+                .update({ profile_image: compressedBase64 })
+                .eq('id', employee.id)
+                .select()
+                .maybeSingle();
               if (err2) throw err2;
+              savedEmployee = altData;
+            } else {
+              savedEmployee = updateData;
+            }
           }
+
+          const mergedEmp = {
+            ...employee,
+            ...(savedEmployee || {}),
+            avatar_url: compressedBase64,
+            profile_image: compressedBase64,
+          };
+
+          setEmployee(mergedEmp);
+          saveEmployeeCache(mergedEmp);
+          window.dispatchEvent(new CustomEvent('employee-profile-updated', { detail: mergedEmp }));
+
           toast({ title: 'Profile picture updated successfully!' });
         } catch (err: any) {
-          console.warn("Could not save avatar to DB directly:", err);
-          toast({ title: 'Error saving picture', description: 'Your organization database might not support profile pictures yet.', variant: 'destructive' });
+          console.error("Could not save avatar to DB directly:", err);
+          toast({ title: 'Error saving picture', description: err?.message || 'Failed to save profile picture to database.', variant: 'destructive' });
         } finally {
           setUploadingAvatar(false);
         }

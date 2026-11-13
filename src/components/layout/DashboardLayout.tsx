@@ -56,6 +56,17 @@ export default function DashboardLayout() {
     localStorage.setItem('theme', 'light');
   }, []);
 
+  // Listen to profile updates (avatar, phone, address, etc.)
+  useEffect(() => {
+    const handleProfileUpdate = (e: any) => {
+      if (e?.detail) {
+        setEmployee((prev: any) => ({ ...prev, ...e.detail }));
+      }
+    };
+    window.addEventListener('employee-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('employee-profile-updated', handleProfileUpdate);
+  }, []);
+
   const fetchTodayRecord = async (empData: any) => {
     const today = format(new Date(), 'yyyy-MM-dd');
     const { data: todayData } = await supabase
