@@ -53,7 +53,8 @@ export default function LeaveManagementPage({ session }: { session: any }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const empData = await resolveCurrentEmployee(session?.user);
+      const currentUser = session?.user || (await supabase.auth.getUser()).data?.user;
+      const empData = (await resolveCurrentEmployee(currentUser)) || getCachedEmployee();
       if (empData) {
         setEmployee(empData);
         const [leavesRes, balancesRes, policiesRes, attRes] = await Promise.all([
@@ -67,9 +68,8 @@ export default function LeaveManagementPage({ session }: { session: any }) {
         setLeaves(leaves);
         const attendances = attRes.data || [];
         const attSet = new Set(attendances.map(a => a.date));
-        const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-        const DEFAULT_ANNUAL: Record<string, number> = { casual: 12, sick: 5, el_pl: 0, comp_off: 0 };
+        const DEFAULT_ANNUAL: Record<string, number> = { casual: 12, sick: 5, el_pl: 15, comp_off: 0 };
         const bmap: Record<string, { used: number; accrued: number; annual: number }> = {};
         
         ["casual", "sick", "el_pl", "comp_off", "half_day", "wfh", "lwp"].forEach((t) => {
@@ -224,7 +224,9 @@ export default function LeaveManagementPage({ session }: { session: any }) {
                 </div>
                 <div className="flex flex-col mt-auto">
                   <span className={`text-[42px] font-black ${iconColor} leading-none tracking-tighter mb-1`}>{remaining}</span>
-                  <span className="text-xs font-bold text-gray-400 mb-3">/ {b.annual}</span>
+                  <span className="text-xs font-bold text-gray-400 mb-3">
+                    / {b.annual} {b.used > 0 ? `(${b.used} used)` : "left"}
+                  </span>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
                     <div className={`h-1.5 rounded-full ${pct >= 100 ? "bg-red-500" : color}`} style={{ width: `${pct}%` }} />
                   </div>
