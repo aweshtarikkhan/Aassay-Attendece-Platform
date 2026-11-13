@@ -427,8 +427,6 @@ export default function DashboardLayout() {
     { name: 'Tasks', subtitle: pendingTasks > 0 ? `${pendingTasks} Pending` : 'Work & Goals', icon: CheckSquare, path: '/tasks', iconBg: 'bg-amber-500 text-white' },
     { name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' },
     { name: 'Leaves', subtitle: unreadLeaves > 0 ? `${unreadLeaves} New Update` : 'Apply & Balance', icon: Umbrella, path: '/leaves', iconBg: 'bg-blue-500 text-white' },
-    { name: 'History', subtitle: 'Punches & Logs', icon: History, path: '/history', iconBg: 'bg-indigo-500 text-white' },
-    { name: 'Documents', subtitle: 'Files & Letters', icon: FileCheck, path: '/documents', iconBg: 'bg-violet-500 text-white' },
     { name: 'Holidays', subtitle: 'Holiday List', icon: CalendarDays, path: '/holidays', iconBg: 'bg-cyan-600 text-white' },
     { name: 'Settings', subtitle: 'App Preferences', icon: Settings, path: '/settings', iconBg: 'bg-slate-700 text-white' },
   ];
@@ -517,7 +515,7 @@ export default function DashboardLayout() {
 
   const manageSheetContent = (
     <div className="flex flex-col h-full bg-white text-slate-900">
-      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-white shrink-0 pr-12">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-white shrink-0">
         <img src={logoImg} alt="AassayBiz" className="h-8 w-auto object-contain" />
         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-50 text-orange-600 border border-orange-200">
           Manage
@@ -616,7 +614,7 @@ export default function DashboardLayout() {
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent
           side="bottom"
-          className="md:hidden p-0 inset-0 w-full max-w-full h-[100dvh] bg-white border-0 text-slate-900 flex flex-col z-[100000] data-[state=open]:duration-300 data-[state=closed]:duration-200"
+          className="md:hidden p-0 inset-0 w-full max-w-full h-[100dvh] bg-white border-0 text-slate-900 flex flex-col z-[100000] [&>button]:hidden data-[state=open]:duration-300 data-[state=closed]:duration-200"
         >
           {manageSheetContent}
         </SheetContent>
