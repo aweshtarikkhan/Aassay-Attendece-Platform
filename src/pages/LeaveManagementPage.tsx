@@ -81,7 +81,10 @@ export default function LeaveManagementPage({ session }: { session: any }) {
             .filter(l => l.leave_type === t && l.status === 'approved' && !attSet.has(l.start_date))
             .reduce((sum, l) => sum + (Number(l.days) || 1), 0);
 
-          const baseAnnual = Number(pol?.annual_limit ?? DEFAULT_ANNUAL[t] ?? 0);
+          const polLimit = pol?.annual_limit !== undefined && pol?.annual_limit !== null ? Number(pol.annual_limit) : NaN;
+          const baseAnnual = (t !== "comp_off" && (isNaN(polLimit) || polLimit === 0))
+            ? (DEFAULT_ANNUAL[t] ?? 0)
+            : (!isNaN(polLimit) ? polLimit : (DEFAULT_ANNUAL[t] ?? 0));
           const accrued = Number(bal?.accrued ?? 0);
 
           bmap[t] = {
