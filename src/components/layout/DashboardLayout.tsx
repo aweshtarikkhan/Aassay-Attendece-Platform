@@ -428,7 +428,7 @@ export default function DashboardLayout() {
     { name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' },
     { name: 'Leaves', subtitle: unreadLeaves > 0 ? `${unreadLeaves} New Update` : 'Apply & Balance', icon: Umbrella, path: '/leaves', iconBg: 'bg-blue-500 text-white' },
     { name: 'Holidays', subtitle: 'Holiday List', icon: CalendarDays, path: '/holidays', iconBg: 'bg-cyan-600 text-white' },
-    { name: 'Settings', subtitle: 'App Preferences', icon: Settings, path: '/settings', iconBg: 'bg-slate-700 text-white' },
+    { name: 'Settings', subtitle: 'Profile, Docs & History', icon: Settings, path: '/settings', iconBg: 'bg-slate-700 text-white' },
   ];
 
   // Get dot indicator for nav items
