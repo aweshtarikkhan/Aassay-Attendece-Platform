@@ -632,16 +632,6 @@ export default function DashboardLayout() {
         {/* Header - Dark Blue AassayBiz Theme */}
         <header className="h-14 bg-[#0a192f] flex items-center justify-between px-4 md:px-8 z-10 shrink-0 shadow-md">
           <div className="flex items-center min-w-0 mr-2 flex-1">
-            {/* Mobile Hamburger Menu Button */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden mr-2.5 p-1.5 -ml-1 text-white hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center shrink-0 cursor-pointer"
-              title="Open Navigation Menu"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-
             {/* Mobile App Title */}
             <div className="md:hidden flex flex-col min-w-0 flex-1 mr-2" title={businessName || 'AassayBiz'}>
               <span className="text-white font-bold text-sm sm:text-base tracking-wide truncate leading-tight">
