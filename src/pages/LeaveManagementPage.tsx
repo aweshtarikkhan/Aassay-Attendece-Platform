@@ -3,7 +3,11 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
-import { Umbrella, CheckCircle2, XCircle, Clock, ChevronRight, CalendarIcon, ArrowLeft } from "lucide-react";
+import { 
+  Umbrella, CheckCircle2, XCircle, Clock, ChevronRight, ChevronDown, 
+  Calendar as CalendarIcon, ArrowLeft, Layers, Building2, Crown, 
+  HeartPulse, CalendarX, History 
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
@@ -12,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn, safeFormatDate } from "@/lib/utils";
-import { resolveCurrentEmployee, getCachedEmployee } from "@/lib/employee-utils";
+import { resolveCurrentEmployee, getCachedEmployee, getCachedBusinessName } from "@/lib/employee-utils";
 
 const LEAVE_OPTIONS = [
   { key: "casual",    label: "Casual Leave" },
@@ -42,6 +46,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
     }
   };
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
+  const [businessName, setBusinessName] = useState<string>(() => getCachedBusinessName() || "AassayBiz");
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(() => !getCachedEmployee());
   const [applyOpen, setApplyOpen] = useState(false);
@@ -71,6 +76,8 @@ export default function LeaveManagementPage({ session }: { session: any }) {
       const empData = (await resolveCurrentEmployee(currentUser)) || getCachedEmployee();
       if (empData) {
         setEmployee(empData);
+        const bName = empData.organization?.name || getCachedBusinessName();
+        if (bName) setBusinessName(bName);
         const [leavesRes, balancesRes, policiesRes, attRes] = await Promise.all([
           supabase.from("leaves").select("*").eq("employee_id", empData.id).order("created_at", { ascending: false }),
           (supabase as any).from("employee_leave_balances").select("*").eq("employee_id", empData.id),
@@ -209,91 +216,224 @@ export default function LeaveManagementPage({ session }: { session: any }) {
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto md:max-w-5xl px-5 pt-8 pb-24">
-      <div className="flex items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-[#0a192f] tracking-tight mb-1.5">Leave Management</h1>
-          <p className="text-sm font-medium text-gray-500">Track and apply for leaves</p>
+    <div className="w-full max-w-lg mx-auto md:max-w-5xl px-4 sm:px-6 pt-3 sm:pt-4 pb-24">
+      {/* Top Bar with Back and Company Name */}
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-700" />
+          <span>Back</span>
+        </button>
+
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-slate-200/80 shadow-xs text-xs font-extrabold text-[#0a192f] max-w-[200px] sm:max-w-xs truncate">
+          <Building2 className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
+          <span className="truncate">{businessName}</span>
         </div>
-        <Button variant="outline" size="sm" onClick={handleBack} className="rounded-xl font-bold">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
-        </Button>
       </div>
 
-      <div className="mb-8 overflow-x-auto pb-2 -mx-5 px-5">
-        <div className="flex gap-4 min-w-max">
-          {[
-            { key: "casual",   label: "Casual",    color: "bg-blue-600",   iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
-            { key: "el_pl",    label: "Earned/PL", color: "bg-indigo-600", iconColor: "text-indigo-600", iconBg: "bg-indigo-50" },
-            { key: "sick",     label: "Sick",      color: "bg-[#ff6b00]",  iconColor: "text-[#ff6b00]",  iconBg: "bg-orange-50" },
-            { key: "comp_off", label: "Comp-Off",  color: "bg-teal-500",   iconColor: "text-teal-500",   iconBg: "bg-teal-50" },
-          ].map(({ key, label, color, iconColor, iconBg }) => {
-            const b = leaveBalances[key] || { used: 0, accrued: 0, annual: 0 };
-            const remaining = Math.max(0, b.annual - b.used);
-            const pct = b.annual > 0 ? Math.min(100, (b.used / b.annual) * 100) : 0;
-            return (
-              <div key={key} className="w-[145px] p-5 rounded-[24px] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex-shrink-0 flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className={`p-2 rounded-full ${iconBg}`}>
-                    <Umbrella className={`w-4 h-4 ${iconColor}`} />
-                  </div>
-                  <span className="font-bold text-[#0a192f] text-[15px]">{label}</span>
-                </div>
-                <div className="flex flex-col mt-auto">
-                  <span className={`text-[42px] font-black ${iconColor} leading-none tracking-tighter mb-1`}>{remaining}</span>
-                  <span className="text-xs font-bold text-gray-400 mb-3">
-                    / {b.annual} {b.used > 0 ? `(${b.used} used)` : "left"}
-                  </span>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${pct >= 100 ? "bg-red-500" : color}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
+      {/* Modern Curved Hero Banner */}
+      <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-gradient-to-r from-[#0a192f] via-[#0d284e] to-[#1e3a8a] p-5 sm:p-7 shadow-[0_12px_36px_rgba(10,25,47,0.18)] text-white mb-6">
+        {/* Glow Accents */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-[#2563eb]/30 to-[#ff6b00]/20 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-cyan-400/10 blur-xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center">
+              <div className="w-1.5 h-12 sm:h-14 rounded-full bg-gradient-to-b from-cyan-400 via-[#ff6b00] to-[#ff6b00] mr-3 shrink-0 shadow-sm" />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                  Leave<br />Management
+                </h1>
               </div>
-            );
-          })}
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-blue-100/90 mt-2 sm:mt-2.5 max-w-[260px] sm:max-w-md">
+              Track, manage and apply for your leaves
+            </p>
+          </div>
+
+          {/* 3D Illustrated Calendar graphic */}
+          <div className="relative shrink-0 w-24 h-20 sm:w-32 sm:h-28 select-none pointer-events-none">
+            <svg viewBox="0 0 140 120" className="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M125 15C132 18 135 28 130 35C124 33 120 25 125 15Z" fill="#34d399" opacity="0.85" />
+              <path d="M132 45C138 48 140 55 136 60C132 58 130 52 132 45Z" fill="#6ee7b7" opacity="0.7" />
+              <rect x="24" y="24" width="92" height="80" rx="18" fill="#1e40af" opacity="0.35" transform="rotate(-4 70 64)" />
+              <g transform="rotate(-3 70 60)">
+                <rect x="25" y="16" width="90" height="84" rx="16" fill="white" />
+                <path d="M25 28C25 21.3726 30.3726 16 37 16H103C109.627 16 115 21.3726 115 28V38H25V28Z" fill="url(#cal_head)" />
+                <rect x="42" y="10" width="6" height="14" rx="3" fill="#cbd5e1" stroke="#f1f5f9" strokeWidth="1.5" />
+                <rect x="67" y="10" width="6" height="14" rx="3" fill="#cbd5e1" stroke="#f1f5f9" strokeWidth="1.5" />
+                <rect x="92" y="10" width="6" height="14" rx="3" fill="#cbd5e1" stroke="#f1f5f9" strokeWidth="1.5" />
+                <rect x="35" y="46" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="52" y="46" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="69" y="46" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="86" y="46" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="35" y="60" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="52" y="60" width="12" height="10" rx="3" fill="#93c5fd" />
+                <rect x="69" y="60" width="12" height="10" rx="3" fill="#93c5fd" />
+                <rect x="86" y="60" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="35" y="74" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="52" y="74" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <rect x="69" y="74" width="12" height="10" rx="3" fill="#e2e8f0" />
+                <circle cx="96" cy="78" r="16" fill="url(#check_grad)" filter="drop-shadow(0 4px 8px rgba(16,185,129,0.4))" />
+                <path d="M90 78L94 82L102 73" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </g>
+              <defs>
+                <linearGradient id="cal_head" x1="25" y1="16" x2="115" y2="38" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#3b82f6" />
+                  <stop offset="1" stopColor="#1d4ed8" />
+                </linearGradient>
+                <linearGradient id="check_grad" x1="80" y1="62" x2="112" y2="94" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#34d399" />
+                  <stop offset="1" stopColor="#059669" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
         </div>
-        {loading && <p className="text-xs font-bold text-gray-400 mt-2">Loading balances...</p>}
       </div>
 
-      <div onClick={() => setApplyOpen(true)} className="w-full h-[64px] mb-8 bg-gradient-to-r from-[#ff6b00] to-[#ff8c00] hover:from-[#e66000] hover:to-[#e67e00] text-white rounded-[20px] shadow-[0_8px_24px_rgba(255,107,0,0.25)] flex justify-between items-center px-6 cursor-pointer active:scale-95 transition-all">
-        <div className="flex items-center gap-4">
-          <Umbrella className="w-6 h-6" />
-          <span className="font-bold text-[17px]">Apply for Leave</span>
+      {/* Leave Balance Section Header */}
+      <div className="flex items-center justify-between mb-3.5">
+        <div className="flex items-center gap-2">
+          <Layers className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg sm:text-xl font-black text-[#0a192f] tracking-tight">Leave Balance</h2>
         </div>
-        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+        <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-xs text-xs font-bold text-slate-700">
+          <span>This Year</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+        </div>
+      </div>
+
+      {/* 2x2 Grid of Balance Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+        {[
+          { key: "casual",   label: "Casual",    icon: Umbrella,   color: "bg-blue-600",   numColor: "text-blue-600",   iconColor: "text-blue-600",   iconBg: "bg-blue-50",   bgGrad: "from-white to-blue-50/20" },
+          { key: "el_pl",    label: "Earned/PL", icon: Crown,      color: "bg-purple-600", numColor: "text-purple-600", iconColor: "text-purple-600", iconBg: "bg-purple-50", bgGrad: "from-white to-purple-50/20" },
+          { key: "sick",     label: "Sick",      icon: HeartPulse, color: "bg-[#ff6b00]",  numColor: "text-[#ff6b00]",  iconColor: "text-[#ff6b00]",  iconBg: "bg-orange-50", bgGrad: "from-white to-orange-50/20" },
+          { key: "comp_off", label: "Comp Off",  icon: CalendarX,  color: "bg-rose-600",   numColor: "text-rose-600",   iconColor: "text-rose-600",   iconBg: "bg-rose-50",   bgGrad: "from-white to-rose-50/20" },
+        ].map(({ key, label, icon: Icon, color, numColor, iconColor, iconBg, bgGrad }) => {
+          const b = leaveBalances[key] || { used: 0, accrued: 0, annual: 0 };
+          const remaining = Math.max(0, b.annual - b.used);
+          const pct = b.annual > 0 ? Math.min(100, (remaining / b.annual) * 100) : 0;
+          return (
+            <div
+              key={key}
+              className={cn(
+                "relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br bg-white p-4 sm:p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md",
+                bgGrad
+              )}
+            >
+              <div className="flex items-center gap-2 sm:gap-2.5 mb-2 sm:mb-3">
+                <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
+                  <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5", iconColor)} />
+                </div>
+                <span className="font-extrabold text-[#0a192f] text-sm sm:text-base leading-tight truncate">
+                  {label}
+                </span>
+              </div>
+
+              <div className="mt-1">
+                <div className="flex items-baseline gap-1">
+                  <span className={cn("text-2xl sm:text-3xl font-black tracking-tight", numColor)}>
+                    {remaining}
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-400">
+                    / {b.annual}
+                  </span>
+                </div>
+
+                <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 mt-2.5 overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-500", color)}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+
+                <p className="text-[11px] font-semibold text-slate-400 mt-2">
+                  {b.used} used
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Apply for Leave CTA Button */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setApplyOpen(true)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setApplyOpen(true); }}
+        className="w-full h-14 sm:h-16 mb-6 bg-gradient-to-r from-[#ff6b00] via-[#ff7817] to-[#ea580c] hover:opacity-95 text-white rounded-2xl sm:rounded-3xl shadow-[0_10px_25px_rgba(255,107,0,0.35)] flex items-center justify-between px-5 sm:px-6 cursor-pointer active:scale-[0.98] transition-all"
+      >
+        <div className="flex items-center gap-3">
+          <Umbrella className="w-6 h-6 text-white" />
+          <span className="font-black text-base sm:text-lg tracking-wide">Apply for Leave</span>
+        </div>
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/25 flex items-center justify-center shadow-xs">
           <ChevronRight className="w-5 h-5 text-white" />
         </div>
       </div>
 
-      <div className="space-y-4 mb-4">
-        <h3 className="text-[19px] font-black text-[#0a192f]">Leave History</h3>
+      {/* Leave History Section */}
+      <div className="space-y-3.5 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-slate-800" />
+            <h3 className="text-lg sm:text-xl font-black text-[#0a192f] tracking-tight">Leave History</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById("leave-history-list");
+              el?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
+          >
+            <span>View All</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
         {loading ? (
-          <p className="text-xs font-bold text-gray-500">Loading history...</p>
+          <p className="text-xs font-bold text-slate-400 py-4 text-center">Loading history...</p>
         ) : leaves.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col items-center justify-center mt-4">
-            <div className="w-28 h-28 bg-[#f5f8ff] rounded-[40px] flex items-center justify-center mb-5">
-              <Umbrella className="w-14 h-14 text-indigo-400" />
+          <div className="text-center py-10 bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center">
+            <div className="w-20 h-20 bg-[#f5f8ff] rounded-3xl flex items-center justify-center mb-4">
+              <Umbrella className="w-10 h-10 text-indigo-400" />
             </div>
-            <h4 className="text-[17px] font-black text-[#0a192f] mb-2">No requests yet</h4>
-            <p className="text-sm font-medium text-gray-500">You have not applied for any leaves.</p>
+            <h4 className="text-base font-black text-[#0a192f] mb-1">No requests yet</h4>
+            <p className="text-xs font-medium text-slate-400">You have not applied for any leaves.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div id="leave-history-list" className="space-y-3">
             {leaves.map((leave) => (
-              <div key={leave.id} className={`flex flex-col p-4 rounded-2xl bg-white shadow-sm border border-gray-100 border-l-4 ${getBorderColor(leave.status)}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[15px] text-[#0a192f]">
+              <div
+                key={leave.id}
+                className={cn(
+                  "flex flex-col p-4 rounded-2xl sm:rounded-3xl bg-white shadow-xs border border-slate-100 border-l-4 transition-all hover:shadow-sm",
+                  getBorderColor(leave.status)
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-extrabold text-sm sm:text-base text-[#0a192f] truncate">
                       {LEAVE_OPTIONS.find(l => l.key === leave.leave_type)?.label || leave.leave_type}
                     </span>
-                    <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg shrink-0">
                       {safeFormatDate(leave.start_date, "MMM d")} - {safeFormatDate(leave.end_date, "MMM d")}
                     </span>
                   </div>
                   {getStatusBadge(leave.status)}
                 </div>
                 <div className="flex items-center justify-between mt-1 gap-2">
-                  <p className="text-[13px] text-gray-500 font-medium truncate flex-1">{leave.reason}</p>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium truncate flex-1">
+                    {leave.reason || "No reason specified"}
+                  </p>
                   {leave.status === "pending" && (
                     <Button
                       variant="ghost"
@@ -304,7 +444,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
                         setLeaveToWithdraw(leave.id);
                         setWithdrawDialogOpen(true);
                       }}
-                      className="h-7 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-2 shrink-0"
+                      className="h-7 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 rounded-lg shrink-0"
                     >
                       Withdraw
                     </Button>

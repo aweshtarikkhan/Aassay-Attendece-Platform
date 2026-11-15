@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,10 +14,13 @@ import {
   History,
   Video,
   Link2,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft,
+  Building2,
+  Layers
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { resolveCurrentEmployee, getCachedEmployee } from '@/lib/employee-utils';
+import { resolveCurrentEmployee, getCachedEmployee, getCachedBusinessName } from '@/lib/employee-utils';
 
 export interface EmployeeTask {
   id: string;
@@ -69,7 +73,24 @@ const PRIORITY_BADGES: Record<string, string> = {
 };
 
 export default function TasksPage({ session }: { session: any }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
+  const [businessName, setBusinessName] = useState<string>(() => getCachedBusinessName() || "AassayBiz");
   const [tasks, setTasks] = useState<EmployeeTask[]>([]);
   const [statuses, setStatuses] = useState<TaskStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,6 +185,8 @@ export default function TasksPage({ session }: { session: any }) {
       const empData = await resolveCurrentEmployee(session?.user);
       if (!empData?.id) return;
       setEmployee(empData);
+      const bName = empData.organization?.name || getCachedBusinessName();
+      if (bName) setBusinessName(bName);
 
       // 1. Fetch task statuses for the org
       const { data: statusData } = await supabase
@@ -361,62 +384,116 @@ export default function TasksPage({ session }: { session: any }) {
   }, [tasks]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto px-3 sm:px-6 pb-32 pt-2">
-      {/* Top Header & Overview */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-slate-700 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
-              <CheckSquare className="w-6 h-6" />
+    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto px-4 sm:px-6 pb-32 pt-3 sm:pt-4">
+      {/* Top Bar with Back and Company Name */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-700" />
+          <span>Back</span>
+        </button>
+
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-slate-200/80 shadow-xs text-xs font-extrabold text-[#0a192f] max-w-[200px] sm:max-w-xs truncate">
+          <Building2 className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
+          <span className="truncate">{businessName}</span>
+        </div>
+      </div>
+
+      {/* Modern Curved Hero Banner */}
+      <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-gradient-to-r from-[#0a192f] via-[#0d284e] to-[#1e3a8a] p-5 sm:p-7 shadow-[0_12px_36px_rgba(10,25,47,0.18)] text-white">
+        {/* Glow Accents */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-[#2563eb]/30 to-[#ff6b00]/20 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-cyan-400/10 blur-xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center">
+              <div className="w-1.5 h-12 sm:h-14 rounded-full bg-gradient-to-b from-cyan-400 via-[#ff6b00] to-[#ff6b00] mr-3 shrink-0 shadow-sm" />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                  Task<br />Management
+                </h1>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                My Assigned Tasks
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Review tasks assigned by HR, join scheduled meetings, and update your work progress.
-              </p>
-            </div>
+            <p className="text-xs sm:text-sm font-medium text-blue-100/90 mt-2 sm:mt-2.5 max-w-[260px] sm:max-w-md">
+              Organize, track and manage your daily tasks
+            </p>
+          </div>
+
+          {/* 3D Illustrated Task / Clipboard Graphic */}
+          <div className="relative shrink-0 w-24 h-20 sm:w-32 sm:h-28 select-none pointer-events-none">
+            <svg viewBox="0 0 140 120" className="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M125 15C132 18 135 28 130 35C124 33 120 25 125 15Z" fill="#ff6b00" opacity="0.8" />
+              <path d="M132 45C138 48 140 55 136 60C132 58 130 52 132 45Z" fill="#f97316" opacity="0.6" />
+              <rect x="24" y="24" width="92" height="80" rx="18" fill="#1e40af" opacity="0.35" transform="rotate(-4 70 64)" />
+              <g transform="rotate(-3 70 60)">
+                <rect x="26" y="16" width="88" height="84" rx="16" fill="white" />
+                <path d="M26 28C26 21.3726 31.3726 16 38 16H102C108.627 16 114 21.3726 114 28V36H26V28Z" fill="url(#task_head)" />
+                <rect x="52" y="10" width="36" height="12" rx="4" fill="#ff6b00" />
+                <circle cx="70" cy="14" r="2.5" fill="white" />
+                <rect x="36" y="46" width="10" height="10" rx="3" fill="#ff6b00" />
+                <rect x="52" y="48" width="48" height="6" rx="3" fill="#cbd5e1" />
+                <rect x="36" y="62" width="10" height="10" rx="3" fill="#2563eb" />
+                <rect x="52" y="64" width="40" height="6" rx="3" fill="#cbd5e1" />
+                <rect x="36" y="78" width="10" height="10" rx="3" fill="#10b981" />
+                <rect x="52" y="80" width="32" height="6" rx="3" fill="#cbd5e1" />
+                <circle cx="98" cy="78" r="15" fill="url(#task_badge)" filter="drop-shadow(0 4px 8px rgba(255,107,0,0.4))" />
+                <path d="M93 78L96 81L103 74" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </g>
+              <defs>
+                <linearGradient id="task_head" x1="26" y1="16" x2="114" y2="36" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#ff6b00" />
+                  <stop offset="1" stopColor="#ea580c" />
+                </linearGradient>
+                <linearGradient id="task_badge" x1="84" y1="64" x2="112" y2="92" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#ff8c00" />
+                  <stop offset="1" stopColor="#ff6b00" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
         </div>
+      </div>
 
-        {/* 4 Clean High-Contrast Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">All Tasks</span>
-              <span className="text-sm text-slate-400">📋</span>
-            </div>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{counts.total}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Assigned to you</p>
+      {/* 4 Clean High-Contrast Metric Cards in 2x2 or 4-col */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">All Tasks</span>
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 text-sm">📋</div>
           </div>
+          <p className="text-2xl sm:text-3xl font-black text-[#0a192f] mt-2">{counts.total}</p>
+          <p className="text-[11px] font-semibold text-slate-400 mt-1">Assigned to you</p>
+        </div>
 
-          <div className="bg-amber-50/70 dark:bg-amber-950/20 rounded-2xl p-3.5 border border-amber-200/80 dark:border-amber-900/40">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pending</span>
-              <span className="text-sm">⏳</span>
-            </div>
-            <p className="text-2xl font-extrabold text-amber-800 dark:text-amber-300 mt-1">{counts.pending}</p>
-            <p className="text-[11px] text-amber-600/80 mt-0.5">Awaiting start</p>
+        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-sm">⏳</div>
           </div>
+          <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-2">{counts.pending}</p>
+          <p className="text-[11px] font-semibold text-amber-600/80 mt-1">Awaiting start</p>
+        </div>
 
-          <div className="bg-blue-50/70 dark:bg-blue-950/20 rounded-2xl p-3.5 border border-blue-200/80 dark:border-blue-900/40">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">In Progress</span>
-              <span className="text-sm">🚀</span>
-            </div>
-            <p className="text-2xl font-extrabold text-blue-800 dark:text-blue-300 mt-1">{counts.inProgress}</p>
-            <p className="text-[11px] text-blue-600/80 mt-0.5">Working on it</p>
+        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">In Progress</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-sm">🚀</div>
           </div>
+          <p className="text-2xl sm:text-3xl font-black text-blue-600 mt-2">{counts.inProgress}</p>
+          <p className="text-[11px] font-semibold text-blue-600/80 mt-1">Working on it</p>
+        </div>
 
-          <div className="bg-emerald-50/70 dark:bg-emerald-950/20 rounded-2xl p-3.5 border border-emerald-200/80 dark:border-emerald-900/40">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Done</span>
-              <span className="text-sm">✅</span>
-            </div>
-            <p className="text-2xl font-extrabold text-emerald-800 dark:text-emerald-300 mt-1">{counts.completed}</p>
-            <p className="text-[11px] text-emerald-600/80 mt-0.5">Completed</p>
+        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Done</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-sm">✅</div>
           </div>
+          <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2">{counts.completed}</p>
+          <p className="text-[11px] font-semibold text-emerald-600/80 mt-1">Completed</p>
         </div>
       </div>
 

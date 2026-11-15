@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,10 +46,12 @@ import {
   History,
   Lock,
   Send,
-  Hash
+  Hash,
+  Building2,
+  Layers
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { resolveCurrentEmployee, getCachedEmployee } from '@/lib/employee-utils';
+import { resolveCurrentEmployee, getCachedEmployee, getCachedBusinessName } from '@/lib/employee-utils';
 
 export interface ActivityHistoryItem {
   at: string;
@@ -102,7 +105,24 @@ export interface ExpenseRecord {
 }
 
 export default function ExpensesPage({ session }: { session: any }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
+  const [businessName, setBusinessName] = useState<string>(() => getCachedBusinessName() || "AassayBiz");
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [vehicleRates, setVehicleRates] = useState<Record<string, number>>({
@@ -212,6 +232,8 @@ export default function ExpensesPage({ session }: { session: any }) {
       const empData = await resolveCurrentEmployee(session?.user);
       if (!empData) return;
       setEmployee(empData);
+      const bName = empData.organization?.name || getCachedBusinessName();
+      if (bName) setBusinessName(bName);
 
       // 1. Fetch Vehicle Rates for Org
       if (empData.org_id) {
@@ -1294,16 +1316,85 @@ export default function ExpensesPage({ session }: { session: any }) {
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 pb-32 overflow-x-hidden">
-      {/* Header (Fully Mobile Responsive) */}
+      {/* Top Bar with Back and Company Name */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-700" />
+          <span>Back</span>
+        </button>
+
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-slate-200/80 shadow-xs text-xs font-extrabold text-[#0a192f] max-w-[200px] sm:max-w-xs truncate">
+          <Building2 className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
+          <span className="truncate">{businessName}</span>
+        </div>
+      </div>
+
+      {/* Modern Curved Hero Banner */}
+      <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-gradient-to-r from-[#0a192f] via-[#0d284e] to-[#1e3a8a] p-5 sm:p-7 shadow-[0_12px_36px_rgba(10,25,47,0.18)] text-white">
+        {/* Glow Accents */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-gradient-to-br from-[#2563eb]/30 to-[#ff6b00]/20 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-cyan-400/10 blur-xl pointer-events-none" />
+
+        <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center">
+              <div className="w-1.5 h-12 sm:h-14 rounded-full bg-gradient-to-b from-cyan-400 via-[#ff6b00] to-[#ff6b00] mr-3 shrink-0 shadow-sm" />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                  Expenses &<br />Travel Claims
+                </h1>
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-blue-100/90 mt-2 sm:mt-2.5 max-w-[280px] sm:max-w-md">
+              Submit, track and manage your reimbursement claims
+            </p>
+          </div>
+
+          {/* 3D Illustrated Wallet / Receipt Graphic */}
+          <div className="relative shrink-0 w-24 h-20 sm:w-32 sm:h-28 select-none pointer-events-none">
+            <svg viewBox="0 0 140 120" className="w-full h-full drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M125 15C132 18 135 28 130 35C124 33 120 25 125 15Z" fill="#ff6b00" opacity="0.8" />
+              <path d="M132 45C138 48 140 55 136 60C132 58 130 52 132 45Z" fill="#f97316" opacity="0.6" />
+              <rect x="24" y="24" width="92" height="80" rx="18" fill="#1e40af" opacity="0.35" transform="rotate(-4 70 64)" />
+              <g transform="rotate(-3 70 60)">
+                {/* Wallet Outer */}
+                <rect x="25" y="22" width="90" height="72" rx="16" fill="white" />
+                <path d="M25 32C25 26.4772 29.4772 22 35 22H105C110.523 22 115 26.4772 115 32V38H25V32Z" fill="url(#exp_head)" />
+                {/* Receipt slip popping out */}
+                <rect x="36" y="10" width="38" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                <rect x="42" y="16" width="26" height="3" rx="1.5" fill="#cbd5e1" />
+                <rect x="42" y="22" width="18" height="3" rx="1.5" fill="#ff6b00" />
+                {/* Wallet flap & clasp */}
+                <path d="M75 50H115V72H75C68.9249 72 64 67.0751 64 61C64 54.9249 68.9249 50 75 50Z" fill="#ff6b00" />
+                <circle cx="80" cy="61" r="5" fill="white" />
+                {/* Rupee coin graphic */}
+                <circle cx="48" cy="66" r="15" fill="url(#rupee_grad)" filter="drop-shadow(0 4px 8px rgba(37,99,235,0.35))" />
+                <text x="48" y="72" textAnchor="middle" fill="white" fontSize="17" fontWeight="900" fontFamily="sans-serif">₹</text>
+              </g>
+              <defs>
+                <linearGradient id="exp_head" x1="25" y1="22" x2="115" y2="38" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#ff6b00" />
+                  <stop offset="1" stopColor="#ea580c" />
+                </linearGradient>
+                <linearGradient id="rupee_grad" x1="33" y1="51" x2="63" y2="81" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#3b82f6" />
+                  <stop offset="1" stopColor="#1d4ed8" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Control Row: Month Filter & New Claim CTA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <Receipt className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 shrink-0" />
-            My Expenses & Claims
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Submit Local travel logs (Bike, Car, Cab) or Outstation travel claims (Tickets, Hotel, Food, DA) and track your reimbursement approvals.
-          </p>
+        <div className="flex items-center gap-2">
+          <Layers className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg sm:text-xl font-black text-[#0a192f] tracking-tight">Claims Overview</h2>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1311,14 +1402,14 @@ export default function ExpensesPage({ session }: { session: any }) {
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="flex-1 sm:w-36 bg-white shadow-sm h-9 text-xs"
+            className="flex-1 sm:w-36 bg-white shadow-xs h-10 text-xs font-bold rounded-xl border-slate-200"
           />
           <Button
             onClick={() => {
               resetForm();
               setModalOpen(true);
             }}
-            className="hidden sm:inline-flex bg-orange-600 hover:bg-orange-700 text-white gap-1.5 shadow-sm h-9 text-xs font-semibold px-3 whitespace-nowrap"
+            className="bg-gradient-to-r from-[#ff6b00] to-[#ea580c] hover:opacity-95 text-white gap-1.5 shadow-sm h-10 text-xs font-bold px-4 rounded-xl whitespace-nowrap active:scale-95 transition-all"
           >
             <Plus className="h-4 w-4 shrink-0" /> New Claim
           </Button>
