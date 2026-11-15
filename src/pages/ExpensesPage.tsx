@@ -1391,7 +1391,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                 className="bg-orange-600 hover:bg-orange-700 text-white font-semibold gap-2 shadow-sm shrink-0 h-9 text-xs px-4"
               >
                 <Send className="h-3.5 w-3.5" />
-                Submit Month to HR ({draftExpensesInMonth.length})
+                Submit for Review ({draftExpensesInMonth.length})
               </Button>
             )}
           </CardContent>
@@ -3343,7 +3343,7 @@ export default function ExpensesPage({ session }: { session: any }) {
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2 text-slate-900">
               <Send className="h-4 w-4 text-orange-600" />
-              Submit Month&apos;s Expenses to HR
+              Submit Expenses for Review
             </DialogTitle>
             <DialogDescription>
               {selectedMonth ? format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy') : 'Selected month'} ke sabhi saved draft expenses ek saath HR approval ke liye bheje jayenge.

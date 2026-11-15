@@ -423,7 +423,6 @@ export default function DashboardLayout() {
   ];
 
   const manageTileItems = [
-    { name: 'Home', subtitle: 'Punch & Overview', icon: Home, path: '/dashboard', iconBg: 'bg-orange-500 text-white' },
     { name: 'Tasks', subtitle: pendingTasks > 0 ? `${pendingTasks} Pending` : 'Work & Goals', icon: CheckSquare, path: '/tasks', iconBg: 'bg-amber-500 text-white' },
     { name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' },
     { name: 'Leaves', subtitle: unreadLeaves > 0 ? `${unreadLeaves} New Update` : 'Apply & Balance', icon: Umbrella, path: '/leaves', iconBg: 'bg-blue-500 text-white' },
@@ -613,9 +612,8 @@ export default function DashboardLayout() {
           Manage Pages
         </div>
         <div className="grid grid-cols-2 gap-2.5 pb-2">
-          {manageTileItems.map((item, idx) => {
+          {manageTileItems.map((item) => {
             const hasDot = getNavDot(item.name);
-            const isFullWidth = idx === 6; // Holidays on 7th tile spans 2 cols
             return (
               <NavLink
                 key={item.name}
@@ -626,11 +624,7 @@ export default function DashboardLayout() {
                   setMobileMenuOpen(false);
                 }}
                 className={({ isActive }) =>
-                  `relative flex ${
-                    isFullWidth 
-                      ? 'col-span-2 flex-row items-center justify-start text-left px-4 py-3' 
-                      : 'flex-col items-center justify-center text-center p-3.5'
-                  } gap-2.5 rounded-2xl border transition-all active:scale-95 ${
+                  `relative flex flex-col items-center justify-center text-center p-3.5 gap-2 rounded-2xl border transition-all active:scale-95 ${
                     isActive
                       ? 'bg-orange-50/80 border-orange-400 shadow-sm ring-1 ring-orange-200'
                       : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
