@@ -217,23 +217,6 @@ export default function LeaveManagementPage({ session }: { session: any }) {
 
   return (
     <div className="w-full max-w-lg mx-auto md:max-w-5xl px-4 sm:px-6 pt-3 sm:pt-4 pb-24">
-      {/* Top Bar with Back and Company Name */}
-      <div className="flex items-center justify-between mb-4 gap-2">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 transition-all active:scale-95"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 text-slate-700" />
-          <span>Back</span>
-        </button>
-
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 border border-slate-200/80 shadow-xs text-xs font-extrabold text-[#0a192f] max-w-[200px] sm:max-w-xs truncate">
-          <Building2 className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
-          <span className="truncate">{businessName}</span>
-        </div>
-      </div>
-
       {/* Modern Curved Hero Banner */}
       <div className="relative overflow-hidden rounded-[28px] sm:rounded-[32px] bg-gradient-to-r from-[#0a192f] via-[#0d284e] to-[#1e3a8a] p-5 sm:p-7 shadow-[0_12px_36px_rgba(10,25,47,0.18)] text-white mb-6">
         {/* Glow Accents */}
