@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { CalendarDays, User, LogOut, ChevronRight, Download, FileText, ArrowLeft, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,21 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function SettingsPage({ session }: { session: any }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -28,7 +42,7 @@ export default function SettingsPage({ session }: { session: any }) {
     <div className="w-full max-w-lg mx-auto md:max-w-3xl pb-4 px-4 pt-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="rounded-xl">
+        <Button variant="outline" size="sm" onClick={handleBack} className="rounded-xl">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
@@ -27,6 +27,20 @@ const LEAVE_OPTIONS = [
 
 export default function LeaveManagementPage({ session }: { session: any }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(() => !getCachedEmployee());
@@ -201,7 +215,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
           <h1 className="text-3xl font-black text-[#0a192f] tracking-tight mb-1.5">Leave Management</h1>
           <p className="text-sm font-medium text-gray-500">Track and apply for leaves</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="rounded-xl font-bold">
+        <Button variant="outline" size="sm" onClick={handleBack} className="rounded-xl font-bold">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,20 @@ const isPdf = (name?: string) => /\.pdf$/i.test(name || "");
 
 export default function DocumentsPage({ session }: { session: any }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(() => !getCachedEmployee());
@@ -169,7 +183,7 @@ export default function DocumentsPage({ session }: { session: any }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/dashboard')}
+            onClick={handleBack}
             className="rounded-xl font-semibold text-xs h-9"
           >
             <ArrowLeft className="w-4 h-4 mr-1" /> Back

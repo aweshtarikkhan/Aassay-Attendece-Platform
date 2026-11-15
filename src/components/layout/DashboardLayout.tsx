@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import {  LayoutDashboard, History, CalendarDays, Umbrella, HelpCircle, Bell, LogOut, Moon, Sun, X, CheckCircle2, Menu, ChevronRight, ArrowLeft, Fingerprint, Settings, Home, FileCheck, CheckSquare, Receipt, LayoutGrid } from 'lucide-react';
+import {  LayoutDashboard, History, CalendarDays, Umbrella, HelpCircle, Bell, LogOut, Moon, Sun, X, CheckCircle2, Menu, ChevronRight, ArrowLeft, Fingerprint, Settings, Home, FileCheck, CheckSquare, Receipt, LayoutGrid, MoreVertical, Download } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +37,7 @@ export default function DashboardLayout() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showManageMenu, setShowManageMenu] = useState(false);
   const [unreadLeaves, setUnreadLeaves] = useState(0);
   const [pendingTasks, setPendingTasks] = useState(0);
   const navigate = useNavigate();
@@ -419,7 +420,6 @@ export default function DashboardLayout() {
     { name: 'Expenses', icon: Receipt, path: '/expenses' },
     { name: 'Documents', icon: FileCheck, path: '/documents' },
     { name: 'Holidays', icon: CalendarDays, path: '/holidays' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const manageTileItems = [
@@ -428,7 +428,8 @@ export default function DashboardLayout() {
     { name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' },
     { name: 'Leaves', subtitle: unreadLeaves > 0 ? `${unreadLeaves} New Update` : 'Apply & Balance', icon: Umbrella, path: '/leaves', iconBg: 'bg-blue-500 text-white' },
     { name: 'History', subtitle: 'Punches & Logs', icon: History, path: '/history', iconBg: 'bg-indigo-500 text-white' },
-    { name: 'Settings', subtitle: 'Profile, Docs & Holidays', icon: Settings, path: '/settings', iconBg: 'bg-slate-700 text-white' },
+    { name: 'Documents', subtitle: 'Files & Letters', icon: FileCheck, path: '/documents', iconBg: 'bg-purple-600 text-white' },
+    { name: 'Holidays', subtitle: 'Holiday List', icon: CalendarDays, path: '/holidays', iconBg: 'bg-teal-500 text-white' },
   ];
 
   // Get dot indicator for nav items
@@ -515,18 +516,78 @@ export default function DashboardLayout() {
 
   const manageSheetContent = (
     <div className="flex flex-col h-full bg-white text-slate-900">
-      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-white shrink-0">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200 bg-white shrink-0 relative">
         <img src={logoImg} alt="AassayBiz" className="h-8 w-auto object-contain" />
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-50 text-orange-600 border border-orange-200">
-          Manage
-        </span>
+        
+        {/* Three dots menu with Add to Home Screen & Sign Out */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowManageMenu(!showManageMenu)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors active:scale-95 border border-slate-200 shadow-xs"
+            aria-label="Options"
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+
+          {showManageMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setShowManageMenu(false)} 
+              />
+              <div className="absolute right-0 top-11 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowManageMenu(false);
+                    window.dispatchEvent(new Event('trigger-install-prompt'));
+                  }}
+                  className="w-full px-3.5 py-2.5 text-left flex items-center gap-3 hover:bg-orange-50/50 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 border border-orange-100">
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800">Add to Home Screen</div>
+                    <div className="text-[10px] text-slate-400">Install app on device</div>
+                  </div>
+                </button>
+
+                <div className="my-1 border-t border-slate-100" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowManageMenu(false);
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full px-3.5 py-2.5 text-left flex items-center gap-3 hover:bg-red-50 text-red-600 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                    <LogOut className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-red-600">Sign Out</div>
+                    <div className="text-[10px] text-red-400">Log out of your account</div>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Employee Profile Tile */}
       <div className="px-4 pt-4 pb-2 bg-white">
         <NavLink
           to="/profile"
-          onClick={() => setMobileMenuOpen(false)}
+          state={{ fromManage: true }}
+          onClick={() => {
+            setShowManageMenu(false);
+            setMobileMenuOpen(false);
+          }}
           className="p-3 rounded-2xl border border-slate-200 bg-slate-50/80 hover:border-orange-300 hover:bg-orange-50/40 transition-all flex items-center justify-between"
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -551,16 +612,25 @@ export default function DashboardLayout() {
         <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 px-1">
           Manage Pages
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          {manageTileItems.map((item) => {
+        <div className="grid grid-cols-2 gap-2.5 pb-2">
+          {manageTileItems.map((item, idx) => {
             const hasDot = getNavDot(item.name);
+            const isFullWidth = idx === 6; // Holidays on 7th tile spans 2 cols
             return (
               <NavLink
                 key={item.name}
                 to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
+                state={{ fromManage: true }}
+                onClick={() => {
+                  setShowManageMenu(false);
+                  setMobileMenuOpen(false);
+                }}
                 className={({ isActive }) =>
-                  `relative flex flex-col items-center justify-center text-center gap-2 p-3.5 rounded-2xl border transition-all active:scale-95 ${
+                  `relative flex ${
+                    isFullWidth 
+                      ? 'col-span-2 flex-row items-center justify-start text-left px-4 py-3' 
+                      : 'flex-col items-center justify-center text-center p-3.5'
+                  } gap-2.5 rounded-2xl border transition-all active:scale-95 ${
                     isActive
                       ? 'bg-orange-50/80 border-orange-400 shadow-sm ring-1 ring-orange-200'
                       : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'

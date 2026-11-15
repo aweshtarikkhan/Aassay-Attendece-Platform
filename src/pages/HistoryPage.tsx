@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, parseISO, subMonths, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isSameDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
@@ -13,6 +13,20 @@ import { resolveCurrentEmployee, getCachedEmployee } from '@/lib/employee-utils'
 
 export default function HistoryPage({ session }: { session: any }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
   const [employee, setEmployee] = useState<any>(() => getCachedEmployee());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [records, setRecords] = useState<any[]>([]);
@@ -338,7 +352,7 @@ export default function HistoryPage({ session }: { session: any }) {
         {/* Header and Month Selector */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="rounded-xl h-9">
+            <Button variant="outline" size="sm" onClick={handleBack} className="rounded-xl h-9">
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
             <div className="text-gray-900 dark:text-white">

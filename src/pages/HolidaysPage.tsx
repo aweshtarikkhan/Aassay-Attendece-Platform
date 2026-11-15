@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,20 @@ import { safeFormatDate, safeParseDate } from '@/lib/utils';
 
 export default function HolidaysPage({ session }: { session: any }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.state?.fromManage) {
+      navigate(-1);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('open-mobile-menu'));
+      }, 50);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
   const [holidays, setHolidays] = useState<any[]>(() => {
     try {
       const raw = localStorage.getItem('attendance_holidays');
@@ -67,7 +81,7 @@ export default function HolidaysPage({ session }: { session: any }) {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Company Holidays</h1>
           <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Public and company holidays for the year</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')} className="rounded-xl">
+        <Button variant="outline" size="sm" onClick={handleBack} className="rounded-xl">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
       </div>
