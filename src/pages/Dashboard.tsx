@@ -767,37 +767,37 @@ export default function Dashboard({ session }: { session: any }) {
       <div className="relative z-10 space-y-5 mt-2">
         
         {/* Welcome Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex justify-between items-center border border-gray-100 dark:border-slate-700">
-          <div className="flex-1">
-            <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">{getGreeting()}</p>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-              {employee?.name ? employee.name.split(' ')[0] : 'Employee'}! 👋
+        <div className="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-[0_4px_20px_rgb(0,0,0,0.06)] flex justify-between items-center border border-gray-100 dark:border-slate-700">
+          <div className="flex-1 min-w-0 pr-3">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center flex-wrap gap-1.5 mb-1.5 leading-tight">
+              <span className="text-gray-500 dark:text-slate-400 font-medium text-sm sm:text-base">{getGreeting()}</span>
+              <span>{employee?.name ? employee.name.split(' ')[0] : 'Employee'}! 👋</span>
             </h2>
             
             {employeeShift ? (
-              <div className="flex flex-wrap gap-2 mb-3">
-                <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-lg whitespace-nowrap">
+              <div className="flex items-center flex-wrap gap-1.5 mb-1.5">
+                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md whitespace-nowrap">
                   Shift: {employeeShift.name}
                 </span>
-                <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-lg whitespace-nowrap">
+                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md whitespace-nowrap">
                   {employeeShift.start_time?.slice(0,5)} - {employeeShift.end_time?.slice(0,5)}
                 </span>
-                <span className="px-2.5 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-[10px] font-bold rounded-lg whitespace-nowrap">
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-[10px] font-bold rounded-md whitespace-nowrap">
                   Grace: {employeeShift.grace_minutes}m
                 </span>
               </div>
             ) : (
-              <div className="text-xs text-gray-400 mb-3">No shift assigned</div>
+              <div className="text-xs text-gray-400 mb-1.5">No shift assigned</div>
             )}
             
-            <div className="flex gap-4 text-[10px] font-semibold text-orange-600 dark:text-orange-500">
-              <span className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5"></div> Late up to {employeeShift?.late_end?.slice(0,5) || "10:30"}</span>
-              <span className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5"></div> Half day up to {employeeShift?.half_day_end?.slice(0,5) || "14:00"}</span>
+            <div className="flex items-center flex-wrap gap-x-3.5 gap-y-1 text-[10px] font-semibold text-orange-600 dark:text-orange-500">
+              <span className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5 shrink-0"></div> Late up to {employeeShift?.late_end?.slice(0,5) || "10:30"}</span>
+              <span className="flex items-center"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5 shrink-0"></div> Half day up to {employeeShift?.half_day_end?.slice(0,5) || "14:00"}</span>
             </div>
           </div>
           
           {/* Avatar / Profile Picture */}
-          <div className="w-24 h-24 shrink-0 bg-blue-100 dark:bg-slate-700 rounded-full flex items-center justify-center shadow-inner relative overflow-hidden ml-2 border-2 border-white dark:border-slate-800">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-blue-100 dark:bg-slate-700 rounded-full flex items-center justify-center shadow-inner relative overflow-hidden ml-2 border-2 border-white dark:border-slate-800">
             {(employee?.avatar_url || employee?.profile_image) ? (
               <img 
                 src={employee.avatar_url || employee.profile_image} 
@@ -805,7 +805,7 @@ export default function Dashboard({ session }: { session: any }) {
                 className="w-full h-full object-cover" 
               />
             ) : (
-              <User className="w-12 h-12 text-blue-300 dark:text-slate-500" />
+              <User className="w-9 h-9 sm:w-11 sm:h-11 text-blue-300 dark:text-slate-500" />
             )}
           </div>
         </div>

@@ -441,42 +441,54 @@ export default function TasksPage({ session }: { session: any }) {
         </div>
       </div>
 
-      {/* 4 Clean High-Contrast Metric Cards in 2x2 or 4-col */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+      {/* 4 Clean High-Contrast Metric Cards (Compact Height, High Contrast BG & Hover Lift) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        <div
+          onClick={() => setActiveTab('all')}
+          className="rounded-2xl p-2.5 sm:p-3 border flex flex-col justify-between transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] bg-gradient-to-br from-white via-slate-50 to-slate-100/70 border-slate-200 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:border-slate-300"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">All Tasks</span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 text-sm">📋</div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 uppercase tracking-wider">All Tasks</span>
+            <div className="w-6.5 h-6.5 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 text-xs shadow-2xs">📋</div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-[#0a192f] mt-2">{counts.total}</p>
-          <p className="text-[11px] font-semibold text-slate-400 mt-1">Assigned to you</p>
+          <p className="text-xl sm:text-2xl font-black text-[#0a192f] mt-1">{counts.total}</p>
+          <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Assigned to you</p>
         </div>
 
-        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+        <div
+          onClick={() => setActiveTab('pending')}
+          className="rounded-2xl p-2.5 sm:p-3 border flex flex-col justify-between transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] bg-gradient-to-br from-white via-amber-50/70 to-amber-100/50 border-amber-200/90 shadow-[0_2px_10px_rgba(217,119,6,0.07)] hover:border-amber-300"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-sm">⏳</div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-amber-800 uppercase tracking-wider">Pending</span>
+            <div className="w-6.5 h-6.5 rounded-lg bg-amber-100/80 border border-amber-200 flex items-center justify-center text-xs shadow-2xs">⏳</div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-amber-600 mt-2">{counts.pending}</p>
-          <p className="text-[11px] font-semibold text-amber-600/80 mt-1">Awaiting start</p>
+          <p className="text-xl sm:text-2xl font-black text-amber-600 mt-1">{counts.pending}</p>
+          <p className="text-[10px] font-semibold text-amber-700 mt-0.5">Awaiting start</p>
         </div>
 
-        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+        <div
+          onClick={() => setActiveTab('in_progress')}
+          className="rounded-2xl p-2.5 sm:p-3 border flex flex-col justify-between transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] bg-gradient-to-br from-white via-blue-50/70 to-blue-100/50 border-blue-200/90 shadow-[0_2px_10px_rgba(37,99,235,0.07)] hover:border-blue-300"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">In Progress</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-sm">🚀</div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-blue-800 uppercase tracking-wider">In Progress</span>
+            <div className="w-6.5 h-6.5 rounded-lg bg-blue-100/80 border border-blue-200 flex items-center justify-center text-xs shadow-2xs">🚀</div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-blue-600 mt-2">{counts.inProgress}</p>
-          <p className="text-[11px] font-semibold text-blue-600/80 mt-1">Working on it</p>
+          <p className="text-xl sm:text-2xl font-black text-blue-600 mt-1">{counts.inProgress}</p>
+          <p className="text-[10px] font-semibold text-blue-700 mt-0.5">Working on it</p>
         </div>
 
-        <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+        <div
+          onClick={() => setActiveTab('completed')}
+          className="rounded-2xl p-2.5 sm:p-3 border flex flex-col justify-between transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] bg-gradient-to-br from-white via-emerald-50/70 to-emerald-100/50 border-emerald-200/90 shadow-[0_2px_10px_rgba(5,150,105,0.07)] hover:border-emerald-300"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Done</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-sm">✅</div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Done</span>
+            <div className="w-6.5 h-6.5 rounded-lg bg-emerald-100/80 border border-emerald-200 flex items-center justify-center text-xs shadow-2xs">✅</div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-2">{counts.completed}</p>
-          <p className="text-[11px] font-semibold text-emerald-600/80 mt-1">Completed</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">{counts.completed}</p>
+          <p className="text-[10px] font-semibold text-emerald-700 mt-0.5">Completed</p>
         </div>
       </div>
 

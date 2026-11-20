@@ -292,7 +292,7 @@ export default function LeaveManagementPage({ session }: { session: any }) {
       </div>
 
       {/* 2x2 Grid of Balance Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-4">
         {[
           { key: "casual",   label: "Casual",    icon: Umbrella,   color: "bg-blue-600",   numColor: "text-blue-600",   iconColor: "text-blue-600",   iconBg: "bg-blue-50",   bgGrad: "from-white to-blue-50/20" },
           { key: "el_pl",    label: "Earned/PL", icon: Crown,      color: "bg-purple-600", numColor: "text-purple-600", iconColor: "text-purple-600", iconBg: "bg-purple-50", bgGrad: "from-white to-purple-50/20" },
@@ -306,37 +306,37 @@ export default function LeaveManagementPage({ session }: { session: any }) {
             <div
               key={key}
               className={cn(
-                "relative overflow-hidden rounded-[24px] sm:rounded-[28px] bg-gradient-to-br bg-white p-4 sm:p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md",
+                "relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br bg-white p-2.5 sm:p-3 border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md",
                 bgGrad
               )}
             >
-              <div className="flex items-center gap-2 sm:gap-2.5 mb-2 sm:mb-3">
-                <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
-                  <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5", iconColor)} />
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className={cn("w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
+                  <Icon className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", iconColor)} />
                 </div>
-                <span className="font-extrabold text-[#0a192f] text-sm sm:text-base leading-tight truncate">
+                <span className="font-extrabold text-[#0a192f] text-xs sm:text-sm leading-tight truncate">
                   {label}
                 </span>
               </div>
 
-              <div className="mt-1">
+              <div>
                 <div className="flex items-baseline gap-1">
-                  <span className={cn("text-2xl sm:text-3xl font-black tracking-tight", numColor)}>
+                  <span className={cn("text-xl sm:text-2xl font-black tracking-tight", numColor)}>
                     {remaining}
                   </span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-400">
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-400">
                     / {b.annual}
                   </span>
                 </div>
 
-                <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 mt-2.5 overflow-hidden">
+                <div className="w-full bg-slate-100 rounded-full h-1 sm:h-1.5 mt-1.5 overflow-hidden">
                   <div
                     className={cn("h-full rounded-full transition-all duration-500", color)}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
 
-                <p className="text-[11px] font-semibold text-slate-400 mt-2">
+                <p className="text-[10px] font-semibold text-slate-400 mt-1">
                   {b.used} used
                 </p>
               </div>
