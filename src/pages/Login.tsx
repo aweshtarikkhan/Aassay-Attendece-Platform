@@ -50,16 +50,16 @@ export default function Login() {
         variant: 'destructive',
       });
     } else if (data?.user) {
-      // Proactively ensure employee record is resolved and linked
+      // Proactively ensure employee record is linked with auth_user_id and is an active employee
       try {
         const emp = await resolveCurrentEmployee(data.user);
-        if (!emp) {
-          // User is authenticated in Supabase, but NOT a registered employee in employees table
+        if (!emp || emp.is_active === false) {
+          // User is authenticated in Supabase (e.g. org admin or invoice portal user), but NOT an active employee
           await supabase.auth.signOut();
           clearEmployeeCache();
           toast({
             title: 'Access Denied',
-            description: 'No staff profile found for this login. Please contact your organization administrator.',
+            description: 'Email ID & password mismatch or you do not have access to Attendance Portal. Please contact your organization administrator.',
             variant: 'destructive',
           });
           setLoading(false);
