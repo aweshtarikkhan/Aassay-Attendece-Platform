@@ -404,27 +404,40 @@ export default function DashboardLayout() {
     setUnreadLeaves(0);
   };
 
+  const hasTaskAccess = Boolean(employee?.task_access ?? employee?.has_task_access ?? employee?.salary_structure?.task_access ?? employee?.salary_structure?.has_task_access ?? false);
+  const hasExpenseAccess = Boolean(employee?.expense_access ?? employee?.has_expense_access ?? employee?.salary_structure?.expense_access ?? employee?.salary_structure?.has_expense_access ?? false);
+
+  // Dynamic 4th slot logic requested by user:
+  // - If employee has access to both -> Tasks
+  // - If employee has access to one -> that module (Tasks or Expenses)
+  // - If employee has neither -> Holidays
+  const dynamicNavItem = hasTaskAccess
+    ? { name: 'Tasks', icon: CheckSquare, path: '/tasks', isMenu: false }
+    : hasExpenseAccess
+      ? { name: 'Expenses', icon: Receipt, path: '/expenses', isMenu: false }
+      : { name: 'Holidays', icon: CalendarDays, path: '/holidays', isMenu: false };
+
   const navItems = [
     { name: 'History', icon: History, path: '/history', isMenu: false },
     { name: 'Leaves', icon: Umbrella, path: '/leaves', isMenu: false },
     { name: 'Home', icon: Home, path: '/dashboard', isMenu: false },
-    { name: 'Tasks', icon: CheckSquare, path: '/tasks', isMenu: false },
+    dynamicNavItem,
     { name: 'Manage', icon: LayoutGrid, path: '#', isMenu: true },
   ];
 
   const sidebarNavItems = [
     { name: 'Home', icon: Home, path: '/dashboard' },
-    { name: 'Tasks', icon: CheckSquare, path: '/tasks' },
+    ...(hasTaskAccess ? [{ name: 'Tasks', icon: CheckSquare, path: '/tasks' }] : []),
     { name: 'History', icon: History, path: '/history' },
     { name: 'Leaves', icon: Umbrella, path: '/leaves' },
-    { name: 'Expenses', icon: Receipt, path: '/expenses' },
+    ...(hasExpenseAccess ? [{ name: 'Expenses', icon: Receipt, path: '/expenses' }] : []),
     { name: 'Documents', icon: FileCheck, path: '/documents' },
     { name: 'Holidays', icon: CalendarDays, path: '/holidays' },
   ];
 
   const manageTileItems = [
-    { name: 'Tasks', subtitle: pendingTasks > 0 ? `${pendingTasks} Pending` : 'Work & Goals', icon: CheckSquare, path: '/tasks', iconBg: 'bg-amber-500 text-white' },
-    { name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' },
+    ...(hasTaskAccess ? [{ name: 'Tasks', subtitle: pendingTasks > 0 ? `${pendingTasks} Pending` : 'Work & Goals', icon: CheckSquare, path: '/tasks', iconBg: 'bg-amber-500 text-white' }] : []),
+    ...(hasExpenseAccess ? [{ name: 'Expenses', subtitle: 'Travel & Claims', icon: Receipt, path: '/expenses', iconBg: 'bg-emerald-500 text-white' }] : []),
     { name: 'Leaves', subtitle: unreadLeaves > 0 ? `${unreadLeaves} New Update` : 'Apply & Balance', icon: Umbrella, path: '/leaves', iconBg: 'bg-blue-500 text-white' },
     { name: 'History', subtitle: 'Punches & Logs', icon: History, path: '/history', iconBg: 'bg-indigo-500 text-white' },
     { name: 'Documents', subtitle: 'Files & Letters', icon: FileCheck, path: '/documents', iconBg: 'bg-purple-600 text-white' },
@@ -880,7 +893,7 @@ export default function DashboardLayout() {
             }
 
             if (item.isMenu) {
-              const isOtherPageActive = ['/expenses', '/documents', '/holidays', '/settings', '/profile'].some(p => location.pathname.startsWith(p));
+              const isOtherPageActive = !navItems.filter(i => !i.isMenu).some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
               return (
                 <div key={item.name} className="flex justify-center items-center w-full">
                   <button

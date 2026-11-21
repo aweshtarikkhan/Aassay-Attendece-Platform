@@ -144,10 +144,10 @@ export default function ExpensesPage({ session }: { session: any }) {
   const [submitMonthDialogOpen, setSubmitMonthDialogOpen] = useState(false);
   const [submittingMonth, setSubmittingMonth] = useState(false);
   
-  // Claim Type: null (Step 1 choose) | 'local' (लोकल) | 'outstation' (आउट स्टेशन)
+  // Claim Type: null (Step 1 choose) | 'local' | 'outstation'
   const [claimType, setClaimType] = useState<'local' | 'outstation' | null>(null);
 
-  // ================= Form Fields - LOCAL (लोकल) =================
+  // ================= Form Fields - LOCAL =================
   const [localVehicle, setLocalVehicle] = useState<'bike' | 'car' | 'auto'>('bike');
   const [localDate, setLocalDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [localFrom, setLocalFrom] = useState('');
@@ -157,7 +157,7 @@ export default function ExpensesPage({ session }: { session: any }) {
   const [localReceiptFile, setLocalReceiptFile] = useState<File | null>(null);
   const [existingLocalReceiptUrl, setExistingLocalReceiptUrl] = useState<string | null>(null);
 
-  // ================= Form Fields - OUTSTATION (आउट स्टेशन) =================
+  // ================= Form Fields - OUTSTATION =================
   const [outFromCity, setOutFromCity] = useState('');
   const [outToCity, setOutToCity] = useState('');
   const [outStartDate, setOutStartDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
@@ -165,27 +165,27 @@ export default function ExpensesPage({ session }: { session: any }) {
   const [tripDaysInput, setTripDaysInput] = useState<string>('1');
   const [outPurpose, setOutPurpose] = useState('');
 
-  // 1. Travel Fare (ट्रेवलिंग बिल)
+  // 1. Travel Fare
   const [travelMode, setTravelMode] = useState('Train');
   const [travelBookingRef, setTravelBookingRef] = useState('');
   const [travelAmount, setTravelAmount] = useState<string>('');
   const [travelBillFile, setTravelBillFile] = useState<File | null>(null);
   const [existingTravelReceiptUrl, setExistingTravelReceiptUrl] = useState<string | null>(null);
 
-  // 2. Hotel / Stay (होटल बिल)
+  // 2. Hotel / Stay
   const [hotelName, setHotelName] = useState('');
   const [hotelNights, setHotelNights] = useState<string>('1');
   const [hotelAmount, setHotelAmount] = useState<string>('');
   const [hotelBillFile, setHotelBillFile] = useState<File | null>(null);
   const [existingHotelReceiptUrl, setExistingHotelReceiptUrl] = useState<string | null>(null);
 
-  // 3. Food / Meals (फूड बिल)
+  // 3. Food / Meals
   const [foodDesc, setFoodDesc] = useState('');
   const [foodAmount, setFoodAmount] = useState<string>('');
   const [foodBillFile, setFoodBillFile] = useState<File | null>(null);
   const [existingFoodReceiptUrl, setExistingFoodReceiptUrl] = useState<string | null>(null);
 
-  // 4. Other - Laundry & Other Expenses (लॉन्ड्री एंड अदर एक्सपेंसेस)
+  // 4. Other - Laundry & Other Expenses
   const [otherDesc, setOtherDesc] = useState('');
   const [otherAmount, setOtherAmount] = useState<string>('');
   const [otherBillFile, setOtherBillFile] = useState<File | null>(null);
@@ -194,7 +194,7 @@ export default function ExpensesPage({ session }: { session: any }) {
   // 5. Custom "Create New" Options added by user
   const [customItems, setCustomItems] = useState<CustomOutstationItem[]>([]);
 
-  // 6. DA (Daily Allowance / दैनिक भत्ता)
+  // 6. DA (Daily Allowance)
   const [daMode, setDaMode] = useState<'per_day' | 'direct'>('per_day');
   const [daDailyRate, setDaDailyRate] = useState<string>('500');
   const [daCustomAmount, setDaCustomAmount] = useState<string>('');
@@ -610,7 +610,7 @@ export default function ExpensesPage({ session }: { session: any }) {
     if (card.status !== 'draft') {
       toast({
         title: 'Card Already Sent',
-        description: 'Is month ka card already HR ko bheja ja chuka hai. Naya entry log karne ke liye "+ New Claim" dabayein.',
+        description: 'The claim card for this month has already been submitted to HR. Click "+ New Claim" to add a new claim.',
         variant: 'destructive',
       });
       return;
@@ -726,7 +726,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
   const handleDeleteSubEntry = async (exp: ExpenseRecord, entryId: string) => {
     if (!canEditExpense(exp)) {
-      toast({ title: 'Locked', description: 'Approved claim ki entries delete nahi ho sakti.', variant: 'destructive' });
+      toast({ title: 'Locked', description: 'Approved claim entries cannot be deleted.', variant: 'destructive' });
       return;
     }
     const existingList = getNormalizedEntries(exp);
@@ -735,7 +735,7 @@ export default function ExpensesPage({ session }: { session: any }) {
       await handleDelete(exp.id);
       return;
     }
-    if (!confirm('Kya aap is single day entry ko card se remove karna chahte hain?')) return;
+    if (!confirm('Are you sure you want to remove this entry from the monthly card?')) return;
 
     try {
       const nowIso = new Date().toISOString();
@@ -893,7 +893,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
           toast({
             title: 'Monthly Local Card Created (Draft)!',
-            description: `₹${calculatedLocalAmount.toFixed(2)} saved. Kal isi card par "+ Add Entry" dabakar agle din ki entry jod sakte hain.`,
+            description: `₹${calculatedLocalAmount.toFixed(2)} saved. You can add more days to this card anytime using "+ Add Entry".`,
           });
         }
       } else if (claimType === 'outstation') {
@@ -1121,7 +1121,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
           toast({
             title: 'Monthly Outstation Card Created (Draft)!',
-            description: `₹${calculatedOutstationGross.toLocaleString('en-IN')} (${outFromCity} → ${outToCity}) saved. Agli outstation trip bhi isi card mein "+ Add Entry" se jodein.`,
+            description: `₹${calculatedOutstationGross.toLocaleString('en-IN')} (${outFromCity} → ${outToCity}) saved. You can add more trips to this card anytime using "+ Add Entry".`,
           });
         }
       }
@@ -1453,8 +1453,8 @@ export default function ExpensesPage({ session }: { session: any }) {
               </div>
               <p className="text-xs text-slate-600">
                 {draftExpensesInMonth.length > 0
-                  ? `${selectedMonth ? format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy') : 'Selected month'} ke Local aur Outstation monthly cards ek saath HR approval ke liye bhejein.`
-                  : 'Apne baaki month ke saved drafts bhejne ke liye upar se us month ko select karein.'}
+                  ? `Submit all draft Local and Outstation travel claims for ${selectedMonth ? format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy') : 'the selected month'} together for HR approval.`
+                  : 'Select another month from the month selector above to view and submit drafts from that period.'}
               </p>
             </div>
             {draftExpensesInMonth.length > 0 && (
@@ -1465,7 +1465,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                 className="bg-orange-600 hover:bg-orange-700 text-white font-semibold gap-2 shadow-sm shrink-0 h-9 text-xs px-4"
               >
                 <Send className="h-3.5 w-3.5" />
-                Submit for Review ({draftExpensesInMonth.length})
+                Submit for Approval ({draftExpensesInMonth.length})
               </Button>
             )}
           </CardContent>
@@ -1935,17 +1935,17 @@ export default function ExpensesPage({ session }: { session: any }) {
                 : claimType === null
                 ? 'New Expense Claim'
                 : claimType === 'local'
-                ? 'Local Travel Claim (लोकल यात्रा)'
-                : 'Outstation Tour Claim (आउट स्टेशन)'}
+                ? 'Local Travel Claim'
+                : 'Outstation Tour Claim'}
             </DialogTitle>
             <DialogDescription>
               {editingExpense
-                ? 'अप्रूवल से पहले आप अपने क्लेम की जानकारी और बिल अपडेट कर सकते हैं।'
+                ? 'You can review and update your claim details and bills before approval.'
                 : claimType === null
-                ? 'पहले चुनें कि यह लोकल यात्रा है या आउट स्टेशन टूर क्लेम।'
+                ? 'Choose whether this is a Local Travel or Outstation Tour claim.'
                 : claimType === 'local'
-                ? 'Bike, Car या Cab/Auto से स्थानीय यात्रा का किलोमीटर (KM) विवरण भरें।'
-                : 'मल्टी-डे आउट स्टेशन टूर, बिल (ऑप्शनल), DA और नया कस्टम खर्च जोड़ें।'}
+                ? 'Enter travel details and distance in kilometers (KM) for intra-city local travel via Bike, Car, or Cab/Auto.'
+                : 'Add multi-day outstation tour expenses, bills (optional), DA, and custom expense items.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -1953,7 +1953,7 @@ export default function ExpensesPage({ session }: { session: any }) {
             /* ================= STEP 1: CHOOSE LOCAL VS OUTSTATION ================= */
             <div className="space-y-3 py-2">
               <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Step 1: Select Claim Type (क्लेम का प्रकार चुनें)
+                Step 1: Select Claim Type
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1968,9 +1968,9 @@ export default function ExpensesPage({ session }: { session: any }) {
                     </div>
                     <ChevronRight className="h-5 w-5 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <div className="font-bold text-base text-slate-900">Local Travel (लोकल)</div>
+                  <div className="font-bold text-base text-slate-900">Local Travel</div>
                   <p className="text-xs text-slate-600 mt-1">
-                    Bike, Car या Cab / Auto से शहर के अंदर यात्रा (HR स्वीकृत ₹/KM रेट के अनुसार)।
+                    Intra-city travel via Bike, Car, or Cab/Auto based on HR-approved per-KM reimbursement rates.
                   </p>
                 </button>
 
@@ -1985,9 +1985,9 @@ export default function ExpensesPage({ session }: { session: any }) {
                     </div>
                     <ChevronRight className="h-5 w-5 text-indigo-500 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <div className="font-bold text-base text-slate-900">Outstation Tour (आउट स्टेशन)</div>
+                  <div className="font-bold text-base text-slate-900">Outstation Tour</div>
                   <p className="text-xs text-slate-600 mt-1">
-                    ट्रेवल, होटल, फूड, अन्य, DA + खुद का नया ऑप्शन बनाएं (कितने भी दिन की ट्रिप)।
+                    Travel tickets, hotel stay, food & meals, laundry, DA, and custom expense categories for business trips.
                   </p>
                 </button>
               </div>
@@ -2040,9 +2040,9 @@ export default function ExpensesPage({ session }: { session: any }) {
                 return (
                   <div className="px-3 py-2 rounded-xl bg-orange-50/90 border border-orange-200 text-xs text-orange-900 flex items-center justify-between gap-2">
                     <span>
-                      Ye entry aapke is month ke existing{' '}
+                      This entry will be added to this month's existing{' '}
                       <strong>{claimType === 'local' ? 'Local Monthly Card' : 'Outstation Monthly Card'}</strong>{' '}
-                      me add hogi ({existingCount} {claimType === 'local' ? 'entries' : 'trips'} already saved).
+                      ({existingCount} {claimType === 'local' ? 'entries' : 'trips'} already saved).
                     </span>
                     <Badge className="bg-white text-orange-700 border-orange-300 shrink-0 font-bold">
                       ₹{Number(openDraft.amount || 0).toLocaleString('en-IN')}
@@ -2051,17 +2051,17 @@ export default function ExpensesPage({ session }: { session: any }) {
                 );
               })()}
 
-              {/* ================= OPTION 1: LOCAL (लोकल) ================= */}
+              {/* ================= OPTION 1: LOCAL ================= */}
               {claimType === 'local' ? (
               <div className="space-y-4">
                 {/* 3 Vehicle Options with HR Rates */}
                 <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2.5">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-                      वाहन चुनें (Vehicle Type) *
+                      Vehicle Type *
                     </Label>
                     <div className="text-right">
-                      <span className="text-[11px] font-medium text-amber-800">HR स्वीकृत दर: </span>
+                      <span className="text-[11px] font-medium text-amber-800">HR Approved Rate: </span>
                       <span className="text-sm font-extrabold text-amber-950">₹{currentLocalRate.toFixed(2)} / KM</span>
                     </div>
                   </div>
@@ -2077,7 +2077,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       }`}
                     >
                       <Bike className="h-5 w-5" />
-                      <span>Bike (बाइक)</span>
+                      <span>Bike</span>
                       <span className={`text-[10px] ${localVehicle === 'bike' ? 'text-amber-100' : 'text-slate-500'}`}>
                         ₹{(vehicleRates.bike || 3.50).toFixed(2)}/KM
                       </span>
@@ -2093,7 +2093,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       }`}
                     >
                       <Car className="h-5 w-5" />
-                      <span>Car (कार)</span>
+                      <span>Car</span>
                       <span className={`text-[10px] ${localVehicle === 'car' ? 'text-amber-100' : 'text-slate-500'}`}>
                         ₹{(vehicleRates.car || 8.00).toFixed(2)}/KM
                       </span>
@@ -2109,7 +2109,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       }`}
                     >
                       <Bus className="h-5 w-5" />
-                      <span>Cab / Auto (कैब)</span>
+                      <span>Cab / Auto</span>
                       <span className={`text-[10px] ${localVehicle === 'auto' ? 'text-amber-100' : 'text-slate-500'}`}>
                         ₹{(vehicleRates.auto || 5.00).toFixed(2)}/KM
                       </span>
@@ -2119,7 +2119,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-semibold">Travel Date (यात्रा तिथि) *</Label>
+                    <Label className="text-xs font-semibold">Travel Date *</Label>
                     <Input
                       type="date"
                       value={localDate}
@@ -2148,7 +2148,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                 {parsedLocalKM > 0 && (
                   <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
                     <div className="text-xs text-emerald-800">
-                      <span>गणना: <b>{parsedLocalKM} KM</b> × <b>₹{currentLocalRate.toFixed(2)}</b></span>
+                      <span>Calculation: <b>{parsedLocalKM} KM</b> × <b>₹{currentLocalRate.toFixed(2)}</b></span>
                     </div>
                     <div className="text-right">
                       <span className="text-[11px] text-emerald-700 block">Total Claim Amount</span>
@@ -2159,7 +2159,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-semibold">From Location (कहाँ से)</Label>
+                    <Label className="text-xs font-semibold">From Location</Label>
                     <Input
                       placeholder="e.g. Office / Client A"
                       value={localFrom}
@@ -2168,7 +2168,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold">To Location (कहाँ तक)</Label>
+                    <Label className="text-xs font-semibold">To Location</Label>
                     <Input
                       placeholder="e.g. Client Site B"
                       value={localTo}
@@ -2179,7 +2179,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold">Trip Purpose / Client Note (यात्रा का उद्देश्य)</Label>
+                  <Label className="text-xs font-semibold">Trip Purpose / Client Note</Label>
                   <Input
                     placeholder="e.g. Client visit, product delivery, meeting"
                     value={localPurpose}
@@ -2193,7 +2193,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                       <Paperclip className="h-3.5 w-3.5 text-slate-500" />
-                      <span>Upload Fuel Bill / Toll Slip (Optional / ऐच्छिक)</span>
+                      <span>Upload Fuel Bill / Toll Slip (Optional)</span>
                     </Label>
                     <span className="text-[10px] text-slate-400">Max 2MB (JPG, PNG, PDF)</span>
                   </div>
@@ -2233,13 +2233,13 @@ export default function ExpensesPage({ session }: { session: any }) {
                 </div>
               </div>
             ) : (
-              /* ================= OPTION 2: OUTSTATION (आउट स्टेशन) ================= */
+              /* ================= OPTION 2: OUTSTATION ================= */
               <div className="space-y-4">
                 {/* Outstation Trip Header */}
                 <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <Plane className="h-4 w-4 text-indigo-600" /> Outstation Trip Details (टूर विवरण)
+                      <Plane className="h-4 w-4 text-indigo-600" /> Outstation Trip Details
                     </Label>
                     <Badge className="bg-indigo-600 text-white font-bold text-xs">
                       {tripDays} {tripDays === 1 ? 'Day' : 'Days'} Trip
@@ -2248,7 +2248,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700">From City (प्रारंभ शहर) *</Label>
+                      <Label className="text-xs font-semibold text-slate-700">From City *</Label>
                       <Input
                         placeholder="e.g. Bhopal / Indore"
                         value={outFromCity}
@@ -2258,7 +2258,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700">Destination City (गंतव्य शहर) *</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Destination City *</Label>
                       <Input
                         placeholder="e.g. Mumbai / Delhi"
                         value={outToCity}
@@ -2271,7 +2271,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700">Start Date (प्रारंभ तिथि) *</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Start Date *</Label>
                       <Input
                         type="date"
                         value={outStartDate}
@@ -2285,7 +2285,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700">End Date (समाप्ति तिथि) *</Label>
+                      <Label className="text-xs font-semibold text-slate-700">End Date *</Label>
                       <Input
                         type="date"
                         value={outEndDate}
@@ -2299,7 +2299,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs font-semibold text-slate-700">Trip Days (कितने दिन) *</Label>
+                      <Label className="text-xs font-semibold text-slate-700">Trip Days *</Label>
                       <Input
                         type="text"
                         inputMode="numeric"
@@ -2338,7 +2338,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                   </div>
 
                   <div>
-                    <Label className="text-xs font-semibold text-slate-700">Tour Purpose / Note (टूर का उद्देश्य)</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Tour Purpose / Note</Label>
                     <Input
                       placeholder="e.g. Client meetings, branch technical audit, exhibition"
                       value={outPurpose}
@@ -2348,28 +2348,28 @@ export default function ExpensesPage({ session }: { session: any }) {
                   </div>
                 </div>
 
-                {/* Sub-Card 1: Travel Fare (ट्रेवलिंग बिल) */}
+                {/* Sub-Card 1: Travel Fare */}
                 <div className="p-3.5 border border-slate-200 rounded-xl space-y-3 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Plane className="h-4 w-4 text-blue-600" />
-                      <span className="font-bold text-xs text-slate-800">1. Travel Fare / Tickets (ट्रेवलिंग बिल)</span>
+                      <span className="font-bold text-xs text-slate-800">1. Travel Fare / Tickets</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">बिल अपलोड ऐच्छिक है</span>
+                    <span className="text-[11px] text-slate-400 font-medium">Receipt upload is optional</span>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <Label className="text-[11px] text-slate-600">Mode (माध्यम)</Label>
+                      <Label className="text-[11px] text-slate-600">Mode</Label>
                       <select
                         value={travelMode}
                         onChange={(e) => setTravelMode(e.target.value)}
                         className="mt-1 flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
                       >
-                        <option value="Train">Train (ट्रेन)</option>
-                        <option value="Flight">Flight (फ्लाइट)</option>
-                        <option value="Bus">Bus (बस)</option>
-                        <option value="Intercity Cab">Intercity Cab (कैब)</option>
+                        <option value="Train">Train</option>
+                        <option value="Flight">Flight</option>
+                        <option value="Bus">Bus</option>
+                        <option value="Intercity Cab">Intercity Cab</option>
                         <option value="Personal Car">Personal Car</option>
                         <option value="Other">Other</option>
                       </select>
@@ -2430,14 +2430,14 @@ export default function ExpensesPage({ session }: { session: any }) {
                   </div>
                 </div>
 
-                {/* Sub-Card 2: Hotel / Stay (होटल बिल) */}
+                {/* Sub-Card 2: Hotel / Stay */}
                 <div className="p-3.5 border border-slate-200 rounded-xl space-y-3 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Hotel className="h-4 w-4 text-purple-600" />
-                      <span className="font-bold text-xs text-slate-800">2. Hotel / Lodging (होटल बिल)</span>
+                      <span className="font-bold text-xs text-slate-800">2. Hotel / Lodging</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">बिल अपलोड ऐच्छिक है</span>
+                    <span className="text-[11px] text-slate-400 font-medium">Receipt upload is optional</span>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
@@ -2452,7 +2452,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                     </div>
 
                     <div>
-                      <Label className="text-[11px] text-slate-600">Nights (रातें)</Label>
+                      <Label className="text-[11px] text-slate-600">Nights</Label>
                       <Input
                         type="number"
                         min="1"
@@ -2508,19 +2508,19 @@ export default function ExpensesPage({ session }: { session: any }) {
                   </div>
                 </div>
 
-                {/* Sub-Card 3: Food / Meals (फूड बिल) */}
+                {/* Sub-Card 3: Food / Meals */}
                 <div className="p-3.5 border border-slate-200 rounded-xl space-y-3 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Utensils className="h-4 w-4 text-emerald-600" />
-                      <span className="font-bold text-xs text-slate-800">3. Food / Meals (फूड बिल)</span>
+                      <span className="font-bold text-xs text-slate-800">3. Food / Meals</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">बिल अपलोड ऐच्छिक है</span>
+                    <span className="text-[11px] text-slate-400 font-medium">Receipt upload is optional</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-[11px] text-slate-600">Details (नाश्ता, लंच, डिनर)</Label>
+                      <Label className="text-[11px] text-slate-600">Details (Breakfast, Lunch, Dinner)</Label>
                       <Input
                         placeholder="e.g. Tour meals & client lunch"
                         value={foodDesc}
@@ -2574,19 +2574,19 @@ export default function ExpensesPage({ session }: { session: any }) {
                   </div>
                 </div>
 
-                {/* Sub-Card 4: Other - Laundry & Other Expenses (लॉन्ड्री एंड अन्य खर्च) */}
+                {/* Sub-Card 4: Other - Laundry & Other Expenses */}
                 <div className="p-3.5 border border-slate-200 rounded-xl space-y-3 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Shirt className="h-4 w-4 text-cyan-600" />
-                      <span className="font-bold text-xs text-slate-800">4. Other (लॉन्ड्री & अन्य खर्च)</span>
+                      <span className="font-bold text-xs text-slate-800">4. Other (Laundry & Miscellaneous)</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">बिल अपलोड ऐच्छिक है</span>
+                    <span className="text-[11px] text-slate-400 font-medium">Receipt upload is optional</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <Label className="text-[11px] text-slate-600">Description (लॉन्ड्री, लोकल ऑटो, टोल)</Label>
+                      <Label className="text-[11px] text-slate-600">Description (Laundry, local auto, toll, etc.)</Label>
                       <Input
                         placeholder="e.g. Laundry, local taxi, station auto, tolls"
                         value={otherDesc}
@@ -2640,17 +2640,17 @@ export default function ExpensesPage({ session }: { session: any }) {
                   </div>
                 </div>
 
-                {/* Sub-Card 5: Create New Expense Option (नया कस्टम खर्च जोड़ें) */}
+                {/* Sub-Card 5: Create New Expense Option */}
                 <div className="p-3.5 border-2 border-dashed border-orange-200 bg-orange-50/40 rounded-xl space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <FolderPlus className="h-4 w-4 text-orange-600 shrink-0" />
                       <div>
                         <span className="font-bold text-xs text-slate-800 block">
-                          5. Create New Option (अपना नया खर्च बनाएं)
+                          5. Create New Option (Custom Expense)
                         </span>
                         <span className="text-[11px] text-slate-500">
-                          ऊपर दिए गए 1-4 के अलावा कोई और खर्च (जैसे Gift, Wi-Fi, Porter, Medical) जोड़ें
+                          Add any other expense category (e.g. Client Gift, Wi-Fi, Porter, Medical, etc.)
                         </span>
                       </div>
                     </div>
@@ -2685,7 +2685,7 @@ export default function ExpensesPage({ session }: { session: any }) {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div>
-                              <Label className="text-[11px] text-slate-600">Option Name (खर्च का नाम) *</Label>
+                              <Label className="text-[11px] text-slate-600">Option Name *</Label>
                               <Input
                                 placeholder="e.g. Client Gift, Wi-Fi, Parking"
                                 value={cItem.name}
@@ -2708,7 +2708,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                           </div>
 
                           <div>
-                            <Label className="text-[11px] text-slate-600">Note / Details (विवरण - Optional)</Label>
+                            <Label className="text-[11px] text-slate-600">Note / Details (Optional)</Label>
                             <Input
                               placeholder="Any details for HR approval..."
                               value={cItem.description}
@@ -2758,12 +2758,12 @@ export default function ExpensesPage({ session }: { session: any }) {
                   )}
                 </div>
 
-                {/* Sub-Card 6: DA (Daily Allowance / दैनिक भत्ता) */}
+                {/* Sub-Card 6: DA (Daily Allowance) */}
                 <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Coins className="h-4 w-4 text-amber-700" />
-                      <span className="font-bold text-xs text-amber-950">6. DA (Daily Allowance / दैनिक भत्ता)</span>
+                      <span className="font-bold text-xs text-amber-950">6. DA (Daily Allowance)</span>
                     </div>
                     <div className="flex items-center gap-1 bg-amber-100 p-0.5 rounded text-[11px]">
                       <button
@@ -2786,7 +2786,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                   {daMode === 'per_day' ? (
                     <div className="grid grid-cols-3 gap-2 items-center">
                       <div>
-                        <Label className="text-[11px] text-amber-900">Trip Days (दिन)</Label>
+                        <Label className="text-[11px] text-amber-900">Trip Days</Label>
                         <Input value={`${tripDays} Days`} disabled className="mt-1 h-8 text-xs bg-amber-100/50 font-bold text-amber-950" />
                       </div>
                       <div>
@@ -2945,7 +2945,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                       </Badge>
                     ) : (
                       <span className="text-[11px] font-medium text-orange-600 italic">
-                        Draft — HR ko bhejne par generate hoga
+                        Draft — Generated upon submission to HR
                       </span>
                     )}
                     {selectedDetailRecord.status === 'draft' && (
@@ -3245,7 +3245,7 @@ export default function ExpensesPage({ session }: { session: any }) {
                             <div className="flex items-center gap-2">
                               <Shirt className="h-4 w-4 text-cyan-600 shrink-0" />
                               <div>
-                                <span className="font-bold text-slate-800">Other (लॉन्ड्री & अन्य खर्च)</span>
+                                <span className="font-bold text-slate-800">Other (Laundry & Miscellaneous)</span>
                                 <p className="text-[11px] text-slate-500">
                                   {items?.other?.description || 'Incidentals, laundry, local transit'}
                                 </p>
@@ -3417,10 +3417,10 @@ export default function ExpensesPage({ session }: { session: any }) {
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2 text-slate-900">
               <Send className="h-4 w-4 text-orange-600" />
-              Submit Expenses for Review
+              Submit Expenses for Approval
             </DialogTitle>
             <DialogDescription>
-              {selectedMonth ? format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy') : 'Selected month'} ke sabhi saved draft expenses ek saath HR approval ke liye bheje jayenge.
+              All saved draft expenses for {selectedMonth ? format(parseISO(`${selectedMonth}-01`), 'MMMM yyyy') : 'the selected month'} will be submitted together for HR approval.
             </DialogDescription>
           </DialogHeader>
 
