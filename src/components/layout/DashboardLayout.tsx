@@ -88,13 +88,13 @@ export default function DashboardLayout() {
       }
 
       const empData = await resolveCurrentEmployee(session?.user);
-      if (!empData || empData.is_active === false) {
+      if (!empData) {
         setEmployee(null);
         clearEmployeeCache();
         await supabase.auth.signOut();
         toast({
           title: 'Access Denied',
-          description: 'Email ID & password mismatch or you do not have access to Attendance Portal. Please contact your organization administrator.',
+          description: 'No staff profile found for this login. Please contact your organization administrator.',
           variant: 'destructive',
         });
         navigate('/login');

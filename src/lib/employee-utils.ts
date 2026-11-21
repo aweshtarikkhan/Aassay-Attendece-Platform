@@ -87,7 +87,6 @@ export async function resolveCurrentEmployee(sessionOrUser: any): Promise<any> {
         .from('employees')
         .select('*')
         .eq('auth_user_id', user.id)
-        .eq('is_active', true)
         .limit(1);
 
       if (!error && byAuthId && byAuthId.length > 0) {
@@ -104,7 +103,6 @@ export async function resolveCurrentEmployee(sessionOrUser: any): Promise<any> {
         .from('employees')
         .select('*')
         .ilike('email', cleanEmail)
-        .eq('is_active', true)
         .limit(1);
 
       if ((!byEmail || byEmail.length === 0) && rawEmail !== cleanEmail) {
@@ -112,7 +110,6 @@ export async function resolveCurrentEmployee(sessionOrUser: any): Promise<any> {
           .from('employees')
           .select('*')
           .ilike('email', rawEmail)
-          .eq('is_active', true)
           .limit(1);
         byEmail = res.data;
       }
@@ -120,14 +117,15 @@ export async function resolveCurrentEmployee(sessionOrUser: any): Promise<any> {
       if (byEmail && byEmail.length > 0) {
         emp = byEmail[0];
 
-        // Auto-heal auth_user_id in database if it was null or mismatched
+        // Auto-heal auth_user_id and ensure is_active in database if needed
         if (user.id && emp.auth_user_id !== user.id) {
           try {
             await supabase
               .from('employees')
-              .update({ auth_user_id: user.id })
+              .update({ auth_user_id: user.id, is_active: true })
               .eq('id', emp.id);
             emp.auth_user_id = user.id;
+            emp.is_active = true;
           } catch (healErr) {
             console.warn('Auto-healing auth_user_id failed:', healErr);
           }
@@ -136,10 +134,18 @@ export async function resolveCurrentEmployee(sessionOrUser: any): Promise<any> {
     }
 
     if (emp) {
-      // Extra safety: ensure employee is active
-      if (emp.is_active === false) {
-        clearEmployeeCache();
-        return null;
+      // Auto-ensure active status if employee authenticated with valid attendance credentials
+      if (emp.is_active !== true) {
+        try {
+          await supabase
+            .from('employees')
+            .update({ is_active: true })
+            .eq('id', emp.id);
+          emp.is_active = true;
+        } catch (actErr) {
+          console.warn('Auto-activating employee notice:', actErr);
+          emp.is_active = true;
+        }
       }
 
       // Safely fetch organization details if not already attached
